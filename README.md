@@ -45,11 +45,11 @@ That single substitution — from $A^\top A$ (raw acceleration) to $B^\top B$ (t
 
 CHOMP minimizes a functional combining smoothness and obstacle cost, and descends it with a **covariant** (metric-preconditioned) gradient:
 
-$$U(\xi) = \lambda\, F_\text{fuel}(\xi) + F_\text{obs}(\xi) + \mu\, F_\text{agents}(\xi), \qquad \xi \leftarrow \xi - \alpha\, (B^\top B)^{-1}\, \nabla U(\xi)$$
+$$U(\xi) = \lambda\, F_\text{fuel}(\xi) + F_\text{obs}(\xi) + \mu\, F_\text{agents}(\xi), \qquad \xi \leftarrow \xi - \alpha\, \left(B^\top B\right)^{-1}\, \nabla U(\xi)$$
 
 The fuel term is the energy of the **thrust** — the part of the acceleration the dynamics do *not* provide for free:
 
-$$F_\text{fuel} = \tfrac{1}{2}\!\int \big\lVert \ddot{\xi} - f_\text{CW}(\xi)\big\rVert^2\, dt, \qquad B = D_2 - G_\text{CW}$$
+$$F_\text{fuel} = \tfrac{1}{2}\!\int \left\lVert \ddot{\xi} - f_\text{CW}(\xi)\right\rVert^2\, dt, \qquad B = D_2 - G_\text{CW}$$
 
 where $D_2$ is the discrete second-derivative operator and $G_\text{CW}$ encodes the linearized Clohessy–Wiltshire dynamics (the in-plane radial/along-track coupling, plus a decoupled cross-track oscillator in 3D). When the orbital rate $n \to 0$, $B \to D_2$ and COSMOS gracefully reduces to ordinary free-space CHOMP — a built-in sanity check the code verifies.
 
