@@ -1,0 +1,4 @@
+numpy
+scipy
+matplotlib
+pygame      # only needed for the real-time viewer (cosmos.pygame_orbital_sim)

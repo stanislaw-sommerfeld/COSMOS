@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>COSMOS — live covariant descent in the Clohessy–Wiltshire metric</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#080b11; --panel:#0f151f; --panel-2:#131b27; --line:#1d2737;
+    --ink:#e7eef7; --muted:#7e8da3; --faint:#4a5568;
+    --accent:#37e0c0;       /* fuel-aware path / primary accent */
+    --accent-2:#5b9cff;     /* secondary */
+    --baseline:#67768f;     /* free-space baseline */
+    --danger:#ff5d6c;       /* keep-out */
+    --grid:#141d2b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(55,224,192,.06), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(91,156,255,.07), transparent 55%),
+      var(--bg);
+    color:var(--ink); font-family:"IBM Plex Mono",monospace;
+    -webkit-font-smoothing:antialiased; padding:28px 20px 48px;
+  }
+  .wrap{max-width:1060px; margin:0 auto;}
+  header{margin-bottom:18px;}
+  .kicker{font-size:11px; letter-spacing:.32em; text-transform:uppercase;
+    color:var(--accent); margin:0 0 8px;}
+  h1{font-family:"Sora",sans-serif; font-weight:700; font-size:clamp(22px,3.4vw,32px);
+    margin:0; line-height:1.1; letter-spacing:-.01em;}
+  h1 em{font-style:normal; color:var(--accent);}
+  .sub{color:var(--muted); font-size:13px; margin:10px 0 0; max-width:760px; line-height:1.6;}
+  .stage{display:grid; grid-template-columns:1.55fr 1fr; gap:18px; margin-top:22px;}
+  @media(max-width:860px){ .stage{grid-template-columns:1fr;} }
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line); border-radius:14px; position:relative; overflow:hidden;}
+  .canvas-card{padding:0;}
+  canvas{display:block; width:100%; height:auto; cursor:crosshair;}
+  .legend{position:absolute; left:14px; top:12px; font-size:11px; line-height:1.7;
+    color:var(--muted); pointer-events:none; text-shadow:0 1px 6px #000;}
+  .legend b{font-weight:500;}
+  .dot{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px;
+    vertical-align:middle;}
+  .controls{padding:18px 18px 20px;}
+  .grp{margin-bottom:18px;}
+  .grp:last-child{margin-bottom:0;}
+  label.lab{display:flex; justify-content:space-between; align-items:baseline;
+    font-size:12px; color:var(--muted); margin-bottom:8px; letter-spacing:.02em;}
+  label.lab .val{font-family:"IBM Plex Mono"; color:var(--accent); font-weight:600;
+    font-size:13px;}
+  input[type=range]{-webkit-appearance:none; width:100%; height:4px; border-radius:3px;
+    background:var(--line); outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:16px; height:16px;
+    border-radius:50%; background:var(--accent); cursor:pointer; border:3px solid #06231d;
+    box-shadow:0 0 0 1px var(--accent);}
+  input[type=range]::-moz-range-thumb{width:16px; height:16px; border-radius:50%;
+    background:var(--accent); cursor:pointer; border:3px solid #06231d;}
+  .hint{font-size:10.5px; color:var(--faint); margin-top:6px; line-height:1.5;}
+  .toggles{display:flex; gap:8px; flex-wrap:wrap;}
+  .tog{flex:1; min-width:110px; font-size:11px; padding:8px 10px; border-radius:9px;
+    border:1px solid var(--line); background:var(--panel); color:var(--muted);
+    cursor:pointer; text-align:center; transition:.15s; font-family:inherit;}
+  .tog.on{color:var(--bg); background:var(--accent); border-color:var(--accent); font-weight:600;}
+  .tog.b.on{background:var(--accent-2); border-color:var(--accent-2);}
+  .btn{width:100%; padding:11px; border-radius:10px; border:1px solid var(--line);
+    background:var(--panel); color:var(--ink); font-family:inherit; font-size:12px;
+    letter-spacing:.04em; cursor:pointer; transition:.15s;}
+  .btn:hover{border-color:var(--accent); color:var(--accent);}
+  .readout{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line);
+    border:1px solid var(--line); border-radius:12px; overflow:hidden; margin-top:20px;}
+  .metric{background:var(--panel); padding:13px 14px;}
+  .metric .k{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+  .metric .v{font-family:"Sora",sans-serif; font-weight:600; font-size:21px; margin-top:5px;
+    letter-spacing:-.01em;}
+  .metric .v small{font-size:12px; color:var(--muted); font-weight:400; margin-left:3px;}
+  .v.good{color:var(--accent);} .v.warn{color:var(--danger);}
+  .eqn{margin-top:18px; padding:14px; border:1px solid var(--line); border-radius:12px;
+    background:#0b1119; font-size:12px; color:var(--muted); line-height:1.7;}
+  .eqn code{color:var(--ink); background:#0a0f17; padding:1px 5px; border-radius:4px;
+    font-family:"IBM Plex Mono"; font-size:11.5px;}
+  .eqn b{color:var(--accent); font-weight:500;}
+  footer{margin-top:22px; font-size:11px; color:var(--faint); line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="kicker">COSMOS · interactive</p>
+    <h1>Fuel-aware planning is just CHOMP in the <em>right metric</em>.</h1>
+    <p class="sub">
+      Drag the start, goal and keep-out zone. The dark path is a covariant gradient
+      descent whose smoothness metric is the Clohessy–Wiltshire dynamics
+      (<code style="color:var(--accent)">B&nbsp;=&nbsp;D₂&nbsp;−&nbsp;G_CW</code>), so it
+      minimizes <em style="color:var(--accent);font-style:normal">thrust</em>, not raw
+      acceleration. Slide the mean motion to zero and watch it collapse onto the
+      free-space straight line — the metric <em style="font-style:normal">is</em> the dynamics.
+    </p>
+  </header>
+
+  <div class="stage">
+    <div class="card canvas-card">
+      <canvas id="cv" width="660" height="540"></canvas>
+      <div class="legend">
+        <div><span class="dot" style="background:var(--accent)"></span><b>fuel-aware</b> (B&#7488;B metric)</div>
+        <div><span class="dot" style="background:var(--baseline)"></span><b>free-space</b> baseline (n=0 plan)</div>
+        <div><span class="dot" style="background:var(--danger)"></span><b>keep-out</b> zone</div>
+        <div style="margin-top:4px;color:var(--faint)">○ start &nbsp; ★ goal &nbsp; — drag any</div>
+      </div>
+    </div>
+
+    <div class="card controls">
+      <div class="grp">
+        <label class="lab" for="nm">mean motion&nbsp;&nbsp;n
+          <span class="val" id="nmv">1.00</span></label>
+        <input type="range" id="nm" min="0" max="1.4" step="0.01" value="1.0" />
+        <div class="hint" id="nmhint">n &gt; 0 : orbital coupling bends the cheap path.</div>
+      </div>
+
+      <div class="grp">
+        <label class="lab" for="res">trajectory resolution&nbsp;&nbsp;N
+          <span class="val" id="resv">30</span></label>
+        <input type="range" id="res" min="18" max="40" step="2" value="30" />
+        <div class="hint">waypoints optimized between the fixed endpoints.</div>
+      </div>
+
+      <div class="grp">
+        <label class="lab" for="rad">keep-out radius
+          <span class="val" id="radv">1.40</span></label>
+        <input type="range" id="rad" min="0" max="2.6" step="0.05" value="1.4" />
+        <div class="hint">0 = no obstacle (then the optimum is a single linear solve).</div>
+      </div>
+
+      <div class="grp">
+        <div class="toggles">
+          <button class="tog b on" id="tBase">free-space</button>
+          <button class="tog" id="tThrust">thrust arrows</button>
+        </div>
+      </div>
+
+      <div class="grp">
+        <button class="btn" id="reset">↺ reset scenario</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="readout">
+    <div class="metric"><div class="k">Δv · fuel-aware</div>
+      <div class="v good" id="mDvFuel">—</div></div>
+    <div class="metric"><div class="k">Δv · free-space</div>
+      <div class="v" id="mDvFree">—</div></div>
+    <div class="metric"><div class="k">fuel saved</div>
+      <div class="v good" id="mSave">—</div></div>
+    <div class="metric"><div class="k">min keep-out clearance</div>
+      <div class="v" id="mClr">—</div></div>
+  </div>
+
+  <div class="eqn">
+    The path minimizes the true control energy <code>½‖u‖²</code> with
+    <code>u = B·ξ + c₀</code> and
+    <code>B = [[D₂−3n²I , −2n·D₁] , [2n·D₁ , D₂]]</code>. The descent is preconditioned
+    by <b>(BᵀB)⁻¹</b> — that is what makes "smoothing" mean "spend less fuel". At
+    <b>n → 0</b>, B → blockdiag(D₂, D₂): standard CHOMP, and the optimum is the straight line.
+  </div>
+
+  <footer>
+    Pure JavaScript port of <code style="color:var(--muted)">cosmos.chomp_cw</code> (2D, no
+    rendezvous boundary term) — same operators as the Python mission, running live in your
+    browser. Δv is the L1 control integral under the true CW dynamics; the free-space
+    baseline plans at n=0 and pays under the current n.
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ============================================================================
+   Minimal linear algebra (dense, row-major Float64Array)
+   ============================================================================ */
+function zeros(n){ return new Float64Array(n); }
+function matvec(A, x, r, c){            // A is r*c, x is c  -> r
+  const y = zeros(r);
+  for(let i=0;i<r;i++){ let s=0; const o=i*c; for(let j=0;j<c;j++) s+=A[o+j]*x[j]; y[i]=s; }
+  return y;
+}
+function matTvec(A, x, r, c){           // Aᵀ·x : A is r*c, x is r -> c
+  const y = zeros(c);
+  for(let i=0;i<r;i++){ const o=i*c, xi=x[i]; for(let j=0;j<c;j++) y[j]+=A[o+j]*xi; }
+  return y;
+}
+function matmulT_self(B, r, c){         // returns M = Bᵀ·B  (c*c)
+  const M = zeros(c*c);
+  for(let k=0;k<r;k++){ const o=k*c;
+    for(let i=0;i<c;i++){ const bi=B[o+i]; if(bi===0) continue; const mo=i*c;
+      for(let j=0;j<c;j++) M[mo+j]+=bi*B[o+j];
+    }
+  }
+  return M;
+}
+function inverse(Ain, n){               // Gauss–Jordan with partial pivot
+  const A = Float64Array.from(Ain), I = zeros(n*n);
+  for(let i=0;i<n;i++) I[i*n+i]=1;
+  for(let col=0;col<n;col++){
+    let piv=col, best=Math.abs(A[col*n+col]);
+    for(let r=col+1;r<n;r++){ const v=Math.abs(A[r*n+col]); if(v>best){best=v;piv=r;} }
+    if(piv!==col){ for(let j=0;j<n;j++){
+      let t=A[col*n+j]; A[col*n+j]=A[piv*n+j]; A[piv*n+j]=t;
+      t=I[col*n+j]; I[col*n+j]=I[piv*n+j]; I[piv*n+j]=t; } }
+    const d=A[col*n+col]||1e-12, inv=1/d;
+    for(let j=0;j<n;j++){ A[col*n+j]*=inv; I[col*n+j]*=inv; }
+    for(let r=0;r<n;r++){ if(r===col) continue; const f=A[r*n+col]; if(f===0) continue;
+      for(let j=0;j<n;j++){ A[r*n+j]-=f*A[col*n+j]; I[r*n+j]-=f*I[col*n+j]; } }
+  }
+  return I;
+}
+
+/* ============================================================================
+   CW operators  (faithful 2D port of cosmos.chomp_cw.cw_operators / cw_offset)
+   ============================================================================ */
+let N=30, nm=1.0;
+const W_BC=2000.0;                       // rendezvous (rest-to-rest) weight, like the mission
+let opN, op0;                            // operator sets at current n and at n=0
+
+function buildOp(nmv){                    // faithful port of cw_operators (2D, with w_bc)
+  const dt=Math.PI/(N+1), COLS=2*N, ROWS=2*N+4, sw=Math.sqrt(W_BC);
+  // full N×(N+2) difference operators, sliced into free (1..N) and bound (0,N+1)
+  const D2f=zeros(N*N), D1f=zeros(N*N), D2b=zeros(N*2), D1b=zeros(N*2);
+  for(let t=0;t<N;t++){
+    const r2=new Float64Array(N+2), r1=new Float64Array(N+2);
+    r2[t]=1; r2[t+1]=-2; r2[t+2]=1; r1[t]=-1; r1[t+2]=1;
+    for(let j=0;j<N+2;j++){ r2[j]/=dt*dt; r1[j]/=(2*dt); }
+    for(let j=0;j<N;j++){ D2f[t*N+j]=r2[j+1]; D1f[t*N+j]=r1[j+1]; }
+    D2b[t*2]=r2[0]; D2b[t*2+1]=r2[N+1]; D1b[t*2]=r1[0]; D1b[t*2+1]=r1[N+1];
+  }
+  // B (ROWS × COLS): [[D2f-3n²I, -2n D1f],[2n D1f, D2f]]  + 4 boundary-velocity rows
+  const B=zeros(ROWS*COLS), n2=nmv*nmv;
+  for(let i=0;i<N;i++){ for(let j=0;j<N;j++){
+    const d2=D2f[i*N+j], d1=D1f[i*N+j];
+    B[i*COLS+j]         = d2 - (i===j?3*n2:0);   // Bxx
+    B[i*COLS+(N+j)]     = -2*nmv*d1;             // Bxy
+    B[(N+i)*COLS+j]     =  2*nmv*d1;             // Byx
+    B[(N+i)*COLS+(N+j)] = d2;                    // Byy
+  }}
+  // boundary rows: start/goal velocity per axis (radial then along-track)
+  B[(2*N+0)*COLS + 0]        =  sw/dt;          // radial start vel
+  B[(2*N+1)*COLS + (N-1)]    = -sw/dt;          // radial goal vel
+  B[(2*N+2)*COLS + N]        =  sw/dt;          // along-track start vel
+  B[(2*N+3)*COLS + (2*N-1)]  = -sw/dt;          // along-track goal vel
+  // M = BᵀB + 1e-9 I  ;  Minv
+  const M = matmulT_self(B, ROWS, COLS);
+  for(let i=0;i<COLS;i++) M[i*COLS+i]+=1e-9;
+  return { B, Minv:inverse(M,COLS), D2b, D1b, dt, sw, nm:nmv, ROWS, COLS };
+}
+
+function offset(op, start, goal){         // c0 (length ROWS)
+  const ex=[start.x, goal.x], ey=[start.y, goal.y], c0=zeros(op.ROWS);
+  for(let t=0;t<N;t++){
+    const d2x=op.D2b[t*2]*ex[0]+op.D2b[t*2+1]*ex[1];
+    const d2y=op.D2b[t*2]*ey[0]+op.D2b[t*2+1]*ey[1];
+    const d1x=op.D1b[t*2]*ex[0]+op.D1b[t*2+1]*ex[1];
+    const d1y=op.D1b[t*2]*ey[0]+op.D1b[t*2+1]*ey[1];
+    c0[t]   = d2x - 2*op.nm*d1y;          // radial
+    c0[N+t] = d2y + 2*op.nm*d1x;          // along-track
+  }
+  // boundary-velocity constants
+  c0[2*N+0]=-op.sw*start.x/op.dt; c0[2*N+1]=op.sw*goal.x/op.dt;
+  c0[2*N+2]=-op.sw*start.y/op.dt; c0[2*N+3]=op.sw*goal.y/op.dt;
+  return c0;
+}
+function rebuild(){ opN=buildOp(nm); op0=buildOp(0.0); recomputeOffsets(); }
+
+/* ============================================================================
+   State + scenario
+   ============================================================================ */
+const DEFAULT = {
+  start:{x:3.2, y:-5.2}, goal:{x:-2.4, y:4.6}, obs:{x:0.1, y:0.2, r:1.4}
+};
+let S = JSON.parse(JSON.stringify(DEFAULT));
+let xi = zeros(2*N);                     // fuel-aware trajectory (current n)
+let xi0 = zeros(2*N);                    // free-space plan (n=0), scored under current n
+let c0N = zeros(2*N), c00 = zeros(2*N);
+let showBase=true, showThrust=false;
+
+function straightLine(){                  // interior straight-line interpolation
+  const x=zeros(2*N);
+  for(let i=0;i<N;i++){
+    const a=(i+1)/(N+1);
+    x[i]   = S.start.x+(S.goal.x-S.start.x)*a;
+    x[N+i] = S.start.y+(S.goal.y-S.start.y)*a;
+  }
+  return x;
+}
+function recomputeOffsets(){ c0N=offset(opN,S.start,S.goal); c00=offset(op0,S.start,S.goal); }
+function resetTraj(){ xi=straightLine(); xi0=straightLine(); }
+
+/* ============================================================================
+   Descent  +  metrics
+   ============================================================================ */
+const STEP=0.5, ITERS_PER_FRAME=7, REP_GAIN=100.0, MARGIN=0.2;
+
+function repulsion(x){                    // workspace soft keep-out gradient
+  const g=zeros(2*N);
+  if(S.obs.r<=0) return g;
+  for(let i=0;i<N;i++){
+    const dx=x[i]-S.obs.x, dy=x[N+i]-S.obs.y;
+    const d=Math.hypot(dx,dy)+1e-9, pen=(S.obs.r+MARGIN)-d;
+    if(pen>0){ const k=REP_GAIN*pen/d; g[i]-=k*dx; g[N+i]-=k*dy; }
+  }
+  return g;
+}
+function descendOne(op, c0, x){
+  const R=op.ROWS, C=op.COLS;
+  for(let it=0; it<ITERS_PER_FRAME; it++){
+    const Bx = matvec(op.B, x, R, C);
+    const u = new Float64Array(R);
+    for(let i=0;i<R;i++) u[i]=Bx[i]+c0[i];
+    let g = matTvec(op.B, u, R, C);       // Bᵀ(Bξ+c0)
+    const gr = repulsion(x);
+    for(let i=0;i<C;i++) g[i]+=gr[i];
+    const dx = matvec(op.Minv, g, C, C);
+    for(let i=0;i<C;i++) x[i]-=STEP*dx[i];
+  }
+}
+function descentStep(){ descendOne(opN,c0N,xi); descendOne(op0,c00,xi0); }
+
+function controlOf(op, c0, x){            // physical control u (first 2N entries)
+  const Bx=matvec(op.B,x,op.ROWS,op.COLS);
+  const u=new Float64Array(2*N);
+  for(let i=0;i<2*N;i++) u[i]=Bx[i]+c0[i];
+  return u;
+}
+function deltaV(u){ let s=0; for(let i=0;i<N;i++) s+=Math.hypot(u[i],u[N+i])*opN.dt; return s; }
+function minClearance(x){
+  if(S.obs.r<=0) return NaN;
+  let m=Infinity;
+  for(let i=0;i<N;i++){ const d=Math.hypot(x[i]-S.obs.x, x[N+i]-S.obs.y)-S.obs.r; if(d<m)m=d; }
+  for(const p of [S.start,S.goal]){ const d=Math.hypot(p.x-S.obs.x,p.y-S.obs.y)-S.obs.r; if(d<m)m=d; }
+  return m;
+}
+
+/* ============================================================================
+   Rendering
+   ============================================================================ */
+const cv=document.getElementById("cv"), ctx=cv.getContext("2d");
+const W=cv.width, H=cv.height, PAD=42;
+const RX=[-6.2,6.2], RY=[-7.4,7.4];      // radial (vertical), along-track (horizontal)
+function X(y){ return PAD + (y-RY[0])/(RY[1]-RY[0])*(W-2*PAD); }   // along-track -> px X
+function Y(x){ return H-PAD - (x-RX[0])/(RX[1]-RX[0])*(H-2*PAD); } // radial -> px Y (up)
+function worldFromPx(px,py){
+  const y = RY[0] + (px-PAD)/(W-2*PAD)*(RY[1]-RY[0]);
+  const x = RX[0] + (H-PAD-py)/(H-2*PAD)*(RX[1]-RX[0]);
+  return {x,y};
+}
+const css=getComputedStyle(document.documentElement);
+const C={ accent:css.getPropertyValue('--accent').trim()||'#37e0c0',
+  base:'#67768f', danger:css.getPropertyValue('--danger').trim()||'#ff5d6c',
+  ink:'#e7eef7', grid:'#16202f', muted:'#7e8da3' };
+
+function grid(){
+  ctx.clearRect(0,0,W,H);
+  ctx.lineWidth=1; ctx.strokeStyle=C.grid; ctx.fillStyle=C.muted;
+  ctx.font='10px "IBM Plex Mono"';
+  for(let y=-6;y<=6;y+=2){ ctx.beginPath(); ctx.moveTo(X(y),PAD); ctx.lineTo(X(y),H-PAD); ctx.stroke(); }
+  for(let x=-6;x<=6;x+=2){ ctx.beginPath(); ctx.moveTo(PAD,Y(x)); ctx.lineTo(W-PAD,Y(x)); ctx.stroke(); }
+  // axes labels
+  ctx.fillStyle=C.muted;
+  ctx.fillText('along-track  y →', W-150, H-PAD+24);
+  ctx.save(); ctx.translate(PAD-26, PAD+96); ctx.rotate(-Math.PI/2);
+  ctx.fillText('radial  x →', 0,0); ctx.restore();
+}
+function drawObstacle(){
+  if(S.obs.r<=0) return;
+  const cx=X(S.obs.y), cy=Y(S.obs.x), r=(S.obs.r)/(RX[1]-RX[0])*(H-2*PAD);
+  const grd=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+  grd.addColorStop(0,'rgba(255,93,108,.22)'); grd.addColorStop(1,'rgba(255,93,108,.03)');
+  ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.fill();
+  ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(255,93,108,.7)'; ctx.lineWidth=1.3;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,7); ctx.stroke(); ctx.setLineDash([]);
+}
+function path(x, color, width, dashed){
+  ctx.beginPath();
+  ctx.moveTo(X(S.start.y), Y(S.start.x));
+  for(let i=0;i<N;i++) ctx.lineTo(X(x[N+i]), Y(x[i]));
+  ctx.lineTo(X(S.goal.y), Y(S.goal.x));
+  ctx.lineWidth=width; ctx.strokeStyle=color;
+  if(dashed){ ctx.setLineDash([5,6]); } else { ctx.setLineDash([]);
+    ctx.shadowColor=color; ctx.shadowBlur=10; }
+  ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur=0;
+}
+function thrustArrows(x,u){
+  ctx.strokeStyle='rgba(91,156,255,.8)'; ctx.lineWidth=1.1;
+  const sc=0.18;
+  for(let i=0;i<N;i+=2){
+    const px=X(x[N+i]), py=Y(x[i]);
+    const ax=X(x[N+i]+u[N+i]*sc)-px, ay=Y(x[i]+u[i]*sc)-py;
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px+ax,py+ay); ctx.stroke();
+  }
+}
+function handle(p, kind){
+  const cx=X(p.y), cy=Y(p.x);
+  ctx.lineWidth=2;
+  if(kind==='start'){ ctx.strokeStyle=C.accent; ctx.fillStyle='#06231d';
+    ctx.beginPath(); ctx.arc(cx,cy,8,0,7); ctx.fill(); ctx.stroke(); }
+  else{ ctx.fillStyle=C.accent; ctx.strokeStyle='#06231d';   // star
+    star(cx,cy,5,11,5); }
+}
+function star(cx,cy,inner,outer,pts){
+  ctx.beginPath();
+  for(let i=0;i<pts*2;i++){ const r=i%2?inner:outer, a=Math.PI/pts*i-Math.PI/2;
+    const fx=cx+Math.cos(a)*r, fy=cy+Math.sin(a)*r; i?ctx.lineTo(fx,fy):ctx.moveTo(fx,fy); }
+  ctx.closePath(); ctx.fill();
+}
+
+function render(){
+  grid(); drawObstacle();
+  const uFuel=controlOf(opN,c0N,xi);
+  if(showBase){ path(xi0, C.base, 1.7, true); }
+  path(xi, C.accent, 2.6, false);
+  if(showThrust) thrustArrows(xi,uFuel);
+  handle(S.start,'start'); handle(S.goal,'goal');
+
+  // metrics
+  const dvFuel=deltaV(uFuel);
+  const dvFree=deltaV(controlOf(opN,c0N,xi0));
+  const clr=minClearance(xi);
+  document.getElementById('mDvFuel').textContent=dvFuel.toFixed(2);
+  document.getElementById('mDvFree').textContent=dvFree.toFixed(2);
+  const save=dvFree>1e-6?100*(dvFree-dvFuel)/dvFree:0;
+  const se=document.getElementById('mSave'); se.textContent=(save>=0?'+':'')+save.toFixed(0)+'%';
+  se.className='v '+(save>=0?'good':'warn');
+  const ce=document.getElementById('mClr');
+  if(isNaN(clr)){ ce.textContent='—'; ce.className='v'; }
+  else{ ce.textContent=(clr>=0?'+':'')+clr.toFixed(2); ce.className='v '+(clr>=-1e-3?'good':'warn'); }
+}
+
+/* ============================================================================
+   Loop + interaction
+   ============================================================================ */
+function frame(){ descentStep(); render(); requestAnimationFrame(frame); }
+
+let drag=null;
+function pick(px,py){
+  const cand=[['start',S.start],['goal',S.goal],['obs',S.obs]];
+  for(const [k,p] of cand){
+    const d=Math.hypot(X(p.y)-px, Y(p.x)-py);
+    if(k==='obs'){ if(S.obs.r>0 && Math.abs(d-(S.obs.r)/(RX[1]-RX[0])*(H-2*PAD))<14) return null; }
+    if(d<16) return k;
+  }
+  // inside obstacle disk -> move it
+  if(S.obs.r>0){ const d=Math.hypot(X(S.obs.y)-px, Y(S.obs.x)-py);
+    if(d<(S.obs.r)/(RX[1]-RX[0])*(H-2*PAD)) return 'obs'; }
+  return null;
+}
+function pointer(e){ const r=cv.getBoundingClientRect();
+  const sx=cv.width/r.width, sy=cv.height/r.height;
+  return { px:(e.clientX-r.left)*sx, py:(e.clientY-r.top)*sy }; }
+cv.addEventListener('pointerdown',e=>{ const {px,py}=pointer(e); drag=pick(px,py);
+  if(drag) cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove',e=>{ if(!drag) return; const {px,py}=pointer(e);
+  const w=worldFromPx(px,py);
+  w.x=Math.max(RX[0]+.3,Math.min(RX[1]-.3,w.x));
+  w.y=Math.max(RY[0]+.3,Math.min(RY[1]-.3,w.y));
+  if(drag==='start') S.start=w; else if(drag==='goal') S.goal=w;
+  else { S.obs.x=w.x; S.obs.y=w.y; }
+  recomputeOffsets();
+});
+cv.addEventListener('pointerup',()=>drag=null);
+
+/* controls */
+const $=id=>document.getElementById(id);
+$('nm').addEventListener('input',e=>{ nm=+e.target.value; $('nmv').textContent=nm.toFixed(2);
+  $('nmhint').textContent = nm<0.02 ? 'n = 0 : free space — the optimum is the straight line.'
+    : nm>1.0 ? 'strong orbital coupling: the cheap path curves with the drift.'
+    : 'n > 0 : orbital coupling bends the cheap path.';
+  opN=buildOp(nm); recomputeOffsets(); });
+$('res').addEventListener('input',e=>{ N=+e.target.value; $('resv').textContent=N;
+  rebuild(); resetTraj(); });
+$('rad').addEventListener('input',e=>{ S.obs.r=+e.target.value; $('radv').textContent=S.obs.r.toFixed(2); });
+$('tBase').addEventListener('click',e=>{ showBase=!showBase; e.target.classList.toggle('on',showBase); });
+$('tThrust').addEventListener('click',e=>{ showThrust=!showThrust; e.target.classList.toggle('on',showThrust); });
+$('reset').addEventListener('click',()=>{ S=JSON.parse(JSON.stringify(DEFAULT));
+  $('rad').value=S.obs.r; $('radv').textContent=S.obs.r.toFixed(2);
+  rebuild(); resetTraj(); });
+
+/* boot */
+rebuild(); resetTraj();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

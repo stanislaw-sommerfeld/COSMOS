@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cosmos-orbital"
+version = "1.0.0"
+description = "Energy-aware formation reconfiguration via covariant optimization in the Clohessy–Wiltshire metric"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Stanislaw Sommerfeld" }]
+keywords = ["motion-planning", "CHOMP", "orbital-mechanics", "Clohessy-Wiltshire", "trajectory-optimization"]
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+viz = ["pygame"]          # only needed for the real-time viewer
+
+[project.scripts]
+cosmos = "cosmos.cli:main"   # `cosmos --units si` after install
+
+[tool.setuptools.packages.find]
+where = ["src"]
