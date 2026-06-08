@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>COSMOS — Energy-Aware Formation Reconfiguration</title>
+<meta name="description" content="Making CHOMP's covariant gradient aware of orbital mechanics — so 'smoothness' becomes fuel. A fuel-aware trajectory planner in the Clohessy–Wiltshire metric."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- KaTeX: real LaTeX math rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"></script>
+<style>
+  :root{
+    --bg:#070B20; --bg2:#0A0E2A; --panel:#101736; --panel2:#0E1430;
+    --line:#1E2748; --cyan:#22D3EE; --mint:#2DD4BF; --peri:#818CF8;
+    --txt:#E7ECF8; --mut:#93A0C2; --ink:#070B20;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+    --sans:"IBM Plex Sans",system-ui,sans-serif;
+    --disp:"Sora",var(--sans);
+    --max:1120px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:var(--sans);
+    line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  h1,h2,h3{font-family:var(--disp);font-weight:800;line-height:1.08;margin:0}
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.28em;
+    text-transform:uppercase;color:var(--cyan);font-weight:600}
+  .mut{color:var(--mut)}
+  .accent-c{color:var(--cyan)} .accent-m{color:var(--mint)} .accent-p{color:var(--peri)}
+
+  /* ---------- atmosphere ---------- */
+  .bg-fx{position:fixed;inset:0;z-index:-2;background:
+     radial-gradient(900px 600px at 78% -8%, rgba(34,211,238,.16), transparent 60%),
+     radial-gradient(800px 600px at 12% 8%, rgba(129,140,248,.13), transparent 55%),
+     linear-gradient(180deg,var(--bg),var(--bg2));}
+  .grid-fx{position:fixed;inset:0;z-index:-1;opacity:.35;pointer-events:none;
+     background-image:linear-gradient(var(--line) 1px,transparent 1px),
+       linear-gradient(90deg,var(--line) 1px,transparent 1px);
+     background-size:64px 64px;
+     -webkit-mask-image:radial-gradient(circle at 50% 30%, #000 0%, transparent 78%);
+             mask-image:radial-gradient(circle at 50% 30%, #000 0%, transparent 78%);}
+  .stars{position:fixed;inset:0;z-index:-1;pointer-events:none}
+  .stars i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;
+     opacity:.5;animation:tw 4s ease-in-out infinite}
+  @keyframes tw{0%,100%{opacity:.15}50%{opacity:.8}}
+
+  /* ---------- nav ---------- */
+  header{position:sticky;top:0;z-index:50;backdrop-filter:blur(10px);
+     background:rgba(7,11,32,.66);border-bottom:1px solid var(--line)}
+  nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:800;
+     letter-spacing:.04em;font-size:18px}
+  .brand .dot{width:12px;height:12px;border-radius:50%;background:var(--cyan);
+     box-shadow:0 0 0 4px rgba(34,211,238,.18)}
+  .nav-links{display:flex;gap:26px;align-items:center;font-size:14px}
+  .nav-links a{color:var(--mut);transition:color .2s}
+  .nav-links a:hover{color:var(--txt)}
+  .btn{font-family:var(--mono);font-size:13px;font-weight:600;padding:9px 16px;border-radius:10px;
+     border:1px solid var(--line);transition:transform .15s,border-color .2s,background .2s;display:inline-flex;gap:8px;align-items:center}
+  .btn:hover{transform:translateY(-1px)}
+  .btn.primary{background:var(--cyan);color:var(--ink);border-color:transparent}
+  .btn.primary:hover{background:#5fe3f5}
+  .btn.ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+  .nav-toggle{display:none;background:none;border:0;color:var(--txt);font-size:22px;cursor:pointer}
+
+  /* ---------- hero ---------- */
+  .hero{padding:84px 0 64px;display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}
+  .hero h1{font-size:clamp(56px,9vw,116px);letter-spacing:-.02em;
+     background:linear-gradient(180deg,#fff,#cfe9f4);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .lede{font-family:var(--disp);font-weight:600;font-size:clamp(18px,2.3vw,24px);
+     color:var(--cyan);margin:18px 0 6px;line-height:1.25}
+  .hero .sub{font-size:16px;max-width:48ch;color:var(--mut)}
+  .cta{display:flex;gap:14px;margin-top:28px;flex-wrap:wrap}
+  .reveal-up{opacity:0;transform:translateY(18px);animation:up .9s cubic-bezier(.2,.7,.2,1) forwards}
+  @keyframes up{to{opacity:1;transform:none}}
+  .d1{animation-delay:.05s}.d2{animation-delay:.18s}.d3{animation-delay:.31s}.d4{animation-delay:.44s}.d5{animation-delay:.57s}
+
+  /* orbit visual */
+  .orbit-system{position:relative;width:100%;aspect-ratio:1/1;max-width:420px;margin:0 auto;
+     display:grid;place-items:center}
+  .core{position:absolute;width:54px;height:54px;border-radius:50%;
+     background:radial-gradient(circle at 35% 30%,#7fe9f7,#0e7490);
+     box-shadow:0 0 38px rgba(34,211,238,.6)}
+  .orbit{position:absolute;border:1px solid rgba(147,160,194,.35);border-radius:50%}
+  .o1{width:62%;height:40%;animation:spin 9s linear infinite}
+  .o2{width:86%;height:58%;animation:spin 15s linear infinite reverse}
+  .o3{width:100%;height:80%;border-color:rgba(129,140,248,.28);animation:spin 24s linear infinite}
+  .sat{position:absolute;top:50%;left:0;width:13px;height:13px;margin-top:-6.5px;margin-left:-6.5px;
+     border-radius:50%}
+  .s1{background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+  .s2{background:var(--mint);box-shadow:0 0 12px var(--mint)}
+  .s3{background:var(--peri);box-shadow:0 0 12px var(--peri)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.o1,.o2,.o3,.stars i{animation:none}}
+
+  /* ---------- sections ---------- */
+  section{padding:64px 0;position:relative}
+  .sec-head{max-width:62ch;margin-bottom:38px}
+  .sec-head h2{font-size:clamp(30px,4.4vw,46px);margin-top:10px}
+  .sec-head p{color:var(--mut);font-size:17px;margin:14px 0 0}
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s,transform .7s}
+  .reveal.in{opacity:1;transform:none}
+
+  /* idea transform */
+  .xform{display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:stretch}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+     border-radius:16px;padding:24px}
+  .xcard .tag{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase}
+  .xcard .eq{font-family:var(--mono);font-size:30px;font-weight:600;margin:14px 0 8px}
+  .xarrow{display:grid;place-items:center;font-size:26px;color:var(--ink);}
+  .xarrow span{width:46px;height:46px;border-radius:50%;background:var(--cyan);display:grid;place-items:center;font-weight:800}
+  .formula{margin-top:26px;background:var(--panel2);border:1px solid var(--line);border-radius:14px;
+     padding:20px 22px;font-family:var(--mono);font-size:clamp(15px,2.1vw,21px);overflow-x:auto}
+  .formula b{color:var(--cyan);font-weight:600}
+  .note{margin-top:18px;border-left:3px solid var(--peri);padding:6px 0 6px 16px;color:var(--mut);font-size:15px}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .stat{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);
+     border-radius:16px;padding:26px 20px;text-align:center;position:relative;overflow:hidden}
+  .stat::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--c,var(--cyan));opacity:.85}
+  .stat .num{font-family:var(--disp);font-weight:800;font-size:clamp(34px,4.6vw,52px);color:var(--c,var(--cyan));line-height:1}
+  .stat .unit{font-family:var(--mono);font-size:13px;color:var(--txt);margin-top:6px;font-weight:600}
+  .stat .lab{font-size:12.5px;color:var(--mut);margin-top:8px}
+
+  /* contributions */
+  .three{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .contrib .n{font-family:var(--disp);font-weight:800;font-size:30px;color:var(--c)}
+  .contrib h3{font-size:19px;margin:6px 0 10px}
+  .contrib p{color:var(--mut);font-size:14.5px;margin:0 0 16px}
+  .figframe{background:#fff;border-radius:10px;padding:6px;box-shadow:0 18px 40px rgba(0,0,0,.45)}
+  .figframe img{display:block;width:100%;border-radius:6px}
+  .contrib:hover{transform:translateY(-4px)}
+  .contrib{transition:transform .2s}
+
+  /* architecture */
+  .arch{display:grid;grid-template-columns:1.05fr .95fr;gap:24px;align-items:start}
+  .pipe{display:flex;flex-direction:column;gap:12px}
+  .node{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;
+     display:flex;align-items:center;gap:12px}
+  .node .b{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .node .t{font-weight:600}
+  .node .d{color:var(--mut);font-size:13.5px}
+  .branch{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .tree{font-family:var(--mono);font-size:12.5px;color:var(--mut);background:var(--panel2);
+     border:1px solid var(--line);border-radius:14px;padding:18px;white-space:pre;overflow-x:auto;line-height:1.7}
+  .tree b{color:var(--cyan);font-weight:600}
+
+  /* code */
+  .codeblock{position:relative;background:#070A1C;border:1px solid var(--line);border-radius:14px;
+     margin:14px 0}
+  .codeblock pre{margin:0;padding:18px 18px;overflow-x:auto;font-family:var(--mono);font-size:13.5px;color:#cdd7f5}
+  .codeblock .cmt{color:#6b78a3}
+  .codeblock .ok{color:var(--mint)}
+  .copy{position:absolute;top:10px;right:10px;font-family:var(--mono);font-size:11px;color:var(--mut);
+     background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px 9px;cursor:pointer;transition:.2s}
+  .copy:hover{color:var(--cyan);border-color:var(--cyan)}
+
+  /* gallery */
+  .gal{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .gal .figframe img{aspect-ratio:auto}
+
+  /* footer */
+  footer{border-top:1px solid var(--line);padding:40px 0 56px;margin-top:30px}
+  .foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+  .foot .mono{font-family:var(--mono);font-size:13px;color:var(--mut)}
+
+  @media(max-width:900px){
+    .hero{grid-template-columns:1fr;padding-top:56px}
+    .orbit-system{order:-1;max-width:300px}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .three{grid-template-columns:1fr}
+    .arch{grid-template-columns:1fr}
+    .nav-links{display:none}
+    .nav-toggle{display:block}
+    .nav-links.open{display:flex;position:absolute;top:64px;left:0;right:0;flex-direction:column;
+       background:var(--bg2);border-bottom:1px solid var(--line);padding:16px 24px}
+  }
+  @media(max-width:560px){.xform{grid-template-columns:1fr}.xarrow span{transform:rotate(90deg)}.gal{grid-template-columns:1fr 1fr}}
+
+  /* ---------- KaTeX integration ---------- */
+  .katex{font-size:1em}                               /* inherit surrounding size */
+  .eq .katex{font-size:30px;line-height:1}            /* big transform equations */
+  .formula .katex-display{margin:0}
+  .formula .katex{font-size:clamp(15px,2.1vw,21px);color:var(--txt)}
+  .note .katex{color:var(--mut)}
+  /* let our accent colors flow into the math */
+  .accent-c .katex,.eq.accent-c .katex{color:var(--cyan)}
+  .katex-display>.katex{white-space:normal}
+</style>
+</head>
+<body>
+<div class="bg-fx"></div><div class="grid-fx"></div>
+<div class="stars" id="stars" aria-hidden="true"></div>
+
+<header>
+  <nav class="wrap">
+    <a class="brand" href="#top"><span class="dot"></span>COSMOS</a>
+    <div class="nav-links" id="navlinks">
+      <a href="#idea">The idea</a>
+      <a href="#results">Results</a>
+      <a href="#contributions">Contributions</a>
+      <a href="#architecture">Architecture</a>
+      <a href="cosmos_demo.html">Live demo</a>
+      <a href="#start">Get started</a>
+      <a class="btn ghost" href="https://github.com/stanislaw-sommerfeld/COSMOS">GitHub ↗</a>
+    </div>
+    <button class="nav-toggle" id="navtoggle" aria-label="Menu">☰</button>
+  </nav>
+</header>
+
+<main id="top">
+<div class="wrap">
+
+  <!-- HERO -->
+  <section class="hero" style="padding-top:64px">
+    <div>
+      <div class="eyebrow reveal-up d1">Orbital Motion Planning</div>
+      <h1 class="reveal-up d2">COSMOS</h1>
+      <div class="lede reveal-up d3">Energy-Aware Formation Reconfiguration via Covariant Optimization in the Clohessy–Wiltshire Metric</div>
+      <p class="sub reveal-up d4">Make CHOMP's covariant gradient aware of orbital mechanics — so a generic path smoother becomes a fuel-optimal orbital maneuver planner.</p>
+      <div class="cta reveal-up d5">
+        <a class="btn primary" href="#start">Get started →</a>
+        <a class="btn ghost" href="cosmos_demo.html">Try the live demo ↗</a>
+        <a class="btn ghost" href="#results">See the results</a>
+      </div>
+    </div>
+    <div class="orbit-system reveal-up d3" aria-hidden="true">
+      <div class="core"></div>
+      <div class="orbit o3"><span class="sat s3"></span></div>
+      <div class="orbit o2"><span class="sat s2"></span></div>
+      <div class="orbit o1"><span class="sat s1"></span></div>
+    </div>
+  </section>
+
+  <!-- IDEA -->
+  <section id="idea">
+    <div class="sec-head reveal">
+      <div class="eyebrow">The key idea</div>
+      <h2>Smoothing the wrong thing</h2>
+      <p>Standard trajectory smoothing minimizes acceleration. But in orbit the dynamics already supply acceleration for free — so penalizing raw acceleration optimizes a quantity that has little to do with fuel.</p>
+    </div>
+    <div class="xform reveal">
+      <div class="card xcard">
+        <div class="tag mut">Standard CHOMP</div>
+        <div class="eq">\(A^{\top}A\)</div>
+        <div class="mut" style="font-size:14px">Energy of the raw acceleration — dynamics-blind.</div>
+      </div>
+      <div class="xarrow"><span>→</span></div>
+      <div class="card xcard" style="border-color:rgba(34,211,238,.5)">
+        <div class="tag accent-c">COSMOS</div>
+        <div class="eq accent-c">\(B^{\top}B\)</div>
+        <div class="mut" style="font-size:14px">Energy of the actual thrust, \(B = D_2 - G_{\mathrm{CW}}\). Fuel-aware.</div>
+      </div>
+    </div>
+    <div class="formula reveal">
+      $$U(\xi) = \lambda\,F_{\text{fuel}} + F_{\text{obs}} + \mu\,F_{\text{agents}}
+      \qquad \xi \leftarrow \xi - \alpha\,(B^{\top}B)^{-1}\nabla U
+      \qquad F_{\text{fuel}} = \tfrac{1}{2}\int \big\lVert \ddot{\xi} - f_{\text{CW}} \big\rVert^{2}\, dt$$
+    </div>
+    <div class="note reveal">We optimize <b style="color:var(--peri)">control energy (L2)</b> — the smooth quantity that makes the Riemannian metric and the closed-form optimum possible — and report the realized <b style="color:var(--peri)">Δv (L1)</b>, the true propellant currency. As the orbital rate \(n \to 0\), \(B \to D_2\) and COSMOS reduces to ordinary free-space CHOMP.</div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="results">
+    <div class="sec-head reveal">
+      <div class="eyebrow accent-m">Results</div>
+      <h2>A working prototype, already validated</h2>
+      <p>Every claim below is reproduced by a script in the repository.</p>
+    </div>
+    <div class="stats reveal">
+      <div class="stat" style="--c:var(--cyan)"><div class="num" data-to="53" data-suffix="%">0%</div><div class="unit">± 10%</div><div class="lab">Δv saved vs. dynamics-blind, over 10 random scenarios</div></div>
+      <div class="stat" style="--c:var(--mint)"><div class="num" data-to="1.00" data-dec="2" data-suffix="×">0×</div><div class="unit">optimal</div><div class="lab">matches the analytical LQ / Gramian optimum</div></div>
+      <div class="stat" style="--c:var(--peri)"><div class="num" data-to="100" data-suffix="%">0%</div><div class="unit">safe</div><div class="lab">collision-free success rate (hardened mode)</div></div>
+      <div class="stat" style="--c:var(--cyan)"><div class="num" data-to="1.69" data-dec="2" data-suffix="×">0×</div><div class="unit">safety premium</div><div class="lab">keep-out cost cut from 15× (metric-aware projection)</div></div>
+    </div>
+    <div class="figframe reveal" style="margin-top:22px;max-width:780px">
+      <img src="figures/cosmos_validation.png" alt="Multi-seed validation: savings and collision-free margins"/>
+    </div>
+  </section>
+
+  <!-- CONTRIBUTIONS -->
+  <section id="contributions">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Contributions</div>
+      <h2>Three pieces, one research arc</h2>
+      <p>Metric → optimality → safety-in-the-metric. Each piece reinforces the next.</p>
+    </div>
+    <div class="three">
+      <div class="card contrib reveal" style="--c:var(--cyan)">
+        <div class="n">01</div><h3>Fuel-aware CW metric</h3>
+        <p>Replace \(A^{\top}A\) with \(B^{\top}B\) so the covariant gradient minimizes true thrust energy. The planner spontaneously discovers natural coast arcs.</p>
+        <div class="figframe"><img src="figures/chomp_part3_cw.png" alt="free-space vs fuel-aware transfer"/></div>
+      </div>
+      <div class="card contrib reveal" style="--c:var(--mint)">
+        <div class="n">02</div><h3>Provable optimality</h3>
+        <p>A closed-form LQ / Gramian optimum as ground truth. Fuel-aware CHOMP hits 1.00×; a naive Euclidean keep-out projection balloons to 15×.</p>
+        <div class="figframe"><img src="figures/cosmos_optimal.png" alt="energy vs the analytical LQ optimum"/></div>
+      </div>
+      <div class="card contrib reveal" style="--c:var(--peri)">
+        <div class="n">03</div><h3>Metric-aware safety</h3>
+        <p>Project keep-outs in the fuel metric, not Euclidean space. A closed-form Riemannian projection cuts the premium 15× → 1.69×, still collision-free.</p>
+        <div class="figframe"><img src="figures/cosmos_safe.png" alt="metric-aware vs metric-blind projection"/></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section id="architecture">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Architecture</div>
+      <h2>One command, built on layers</h2>
+      <p>The science is staged into self-contained modules; a single driver composes them into the mission.</p>
+    </div>
+    <div class="arch">
+      <div class="pipe reveal">
+        <div class="node"><span class="b" style="background:var(--cyan)"></span><span class="t">cosmos.cli</span><span class="d">— unified mission driver (the <code>cosmos</code> command)</span></div>
+        <div class="branch">
+          <div class="node"><span class="b" style="background:var(--cyan)"></span><span class="d">fuel-aware CW metric \(B^{\top}B\)</span></div>
+          <div class="node"><span class="b" style="background:var(--mint)"></span><span class="d">LQ benchmark — Module A</span></div>
+          <div class="node"><span class="b" style="background:var(--peri)"></span><span class="d">Riemannian safety — Module B</span></div>
+        </div>
+        <div class="node"><span class="b" style="background:#fff"></span><span class="d">covariant CHOMP core + multi-agent decoupling (Jacobi / Gauss–Seidel / priority)</span></div>
+      </div>
+      <div class="tree reveal">cosmos/
+├── <b>pyproject.toml</b>   deps + `cosmos` entry point
+├── requirements.txt
+├── <b>run_all.py</b>     run the whole framework in one command
+├── cosmos_demo.html  interactive widget (this page links to it)
+├── figures/     curated result figures
+└── src/
+    └── <b>cosmos/</b>
+        ├── cli.py            mission driver
+        ├── chomp_single_agent.py
+        ├── chomp_swarm.py
+        ├── chomp_cw.py       <b>the contribution</b>
+        ├── cosmos_full.py    full system (--3d)
+        ├── cosmos_validation.py
+        ├── cosmos_units.py
+        ├── cosmos_optimal.py <b>Module A</b>
+        ├── cosmos_safe.py    <b>Module B</b>
+        └── orbital_sim.py</div>
+    </div>
+  </section>
+
+  <!-- GET STARTED -->
+  <section id="start">
+    <div class="sec-head reveal">
+      <div class="eyebrow accent-m">Get started</div>
+      <h2>Install &amp; run in a minute</h2>
+      <p>A standard Python package — install it, then call the <code>cosmos</code> command.</p>
+    </div>
+    <div class="reveal">
+      <div class="codeblock">
+        <button class="copy">copy</button>
+<pre><span class="cmt"># clone &amp; install (editable)</span>
+git clone https://github.com/stanislaw-sommerfeld/COSMOS.git
+cd COSMOS
+python -m venv venv &amp;&amp; source venv/bin/activate
+pip install -e .            <span class="cmt"># add ".[viz]" for the pygame viewer</span></pre>
+      </div>
+      <div class="codeblock">
+        <button class="copy">copy</button>
+<pre><span class="cmt"># run the whole framework at once (figures + results + tests)</span>
+python run_all.py
+
+<span class="cmt"># ...or the unified driver — configured by flags</span>
+cosmos --units si                              <span class="cmt"># the mission, real units</span>
+cosmos --metric free --safety none --assign fixed   <span class="cmt"># dynamics-blind baseline</span>
+cosmos --scenario debris --dim 3 --units si    <span class="cmt"># 3D debris rendezvous</span>
+
+<span class="cmt"># reproduce the headline figures</span>
+python -m cosmos.chomp_cw        <span class="cmt"># the contribution</span>
+python -m cosmos.cosmos_optimal  <span class="ok"># 1.00× LQ optimum + the 15× pitfall</span>
+python -m cosmos.cosmos_safe     <span class="ok"># 15× → 1.69× safety fix</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section id="gallery">
+    <div class="sec-head reveal">
+      <div class="eyebrow">Gallery</div>
+      <h2>The mission, visualized</h2>
+    </div>
+    <div class="gal reveal">
+      <div class="figframe"><img src="figures/cosmos_reconfig.png" alt="formation reconfiguration"/></div>
+      <div class="figframe"><img src="figures/cosmos_units.png" alt="realistic LEO units"/></div>
+      <div class="figframe"><img src="figures/orbital_sim.gif" alt="live animation"/></div>
+    </div>
+  </section>
+
+</div>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <div class="brand" style="font-size:16px"><span class="dot"></span>COSMOS</div>
+      <div class="mono" style="margin-top:8px">When “smoothness” means fuel, a path smoother becomes an orbital maneuver planner.</div>
+    </div>
+    <div class="mono">MIT License · built with covariant gradients &amp; a respect for Δv</div>
+  </div>
+</footer>
+
+<script>
+  // render LaTeX with KaTeX once the deferred scripts have loaded
+  window.addEventListener('DOMContentLoaded',()=>{
+    if(window.renderMathInElement){
+      renderMathInElement(document.body,{
+        delimiters:[
+          {left:'$$',right:'$$',display:true},
+          {left:'\\[',right:'\\]',display:true},
+          {left:'\\(',right:'\\)',display:false}
+        ],
+        throwOnError:false
+      });
+    }
+  });
+  // starfield
+  (function(){const s=document.getElementById('stars');let h='';for(let i=0;i<70;i++){
+    h+=`<i style="top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${(Math.random()*4).toFixed(2)}s"></i>`;}
+    s.innerHTML=h;})();
+  // scroll reveal
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');
+    if(e.target.querySelector('[data-to]'))countUp(e.target);io.unobserve(e.target);}});},{threshold:.18});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  // count-up
+  function countUp(scope){scope.querySelectorAll('[data-to]').forEach(n=>{
+    const to=parseFloat(n.dataset.to),dec=parseInt(n.dataset.dec||'0'),suf=n.dataset.suffix||'',dur=1100,t0=performance.now();
+    (function f(t){let p=Math.min(1,(t-t0)/dur);p=1-Math.pow(1-p,3);
+      n.textContent=(to*p).toFixed(dec)+suf;if(p<1)requestAnimationFrame(f);})(t0);});}
+  // copy buttons
+  document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>{
+    const code=b.parentElement.querySelector('pre').innerText;
+    navigator.clipboard.writeText(code).then(()=>{const o=b.textContent;b.textContent='copied ✓';setTimeout(()=>b.textContent=o,1400);});}));
+  // mobile nav
+  const tg=document.getElementById('navtoggle'),nl=document.getElementById('navlinks');
+  tg.addEventListener('click',()=>nl.classList.toggle('open'));
+  nl.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>nl.classList.remove('open')));
+</script>
+</body>
+</html>
