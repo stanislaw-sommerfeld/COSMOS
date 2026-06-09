@@ -103,17 +103,30 @@ if __name__ == "__main__":
     sav = [r["saving"] for r in rows]
     ax1.hist(sav, bins=8, color="#1d9e75", edgecolor="white")
     ax1.axvline(sv_m, color="k", ls="--", lw=1.5, label=f"mean {sv_m:.0f}%")
-    ax1.set_xlabel("delta-v saving vs free-space (%)")
+    ax1.set_xlabel(r"$\Delta v$ saving vs free-space  (%)")
     ax1.set_ylabel("# scenarios"); ax1.legend()
     ax1.set_title("Fuel-aware saving (soft, converged)")
 
     idx = np.arange(N_SEEDS)
-    ax2.scatter(idx, [r["inter"] for r in rows], color="#27a", label="inter-agent")
-    ax2.scatter(idx, [r["keep"] for r in rows], color="#d96459", label="keep-out")
-    ax2.axhline(R_COL, color="#27a", ls=":", lw=1)
-    ax2.axhline(0.0, color="#d96459", ls=":", lw=1)
-    ax2.set_xlabel("scenario (seed)"); ax2.set_ylabel("min clearance")
-    ax2.legend(); ax2.set_title("Safety margins hold across scenarios")
+    inter = [r["inter"] for r in rows]
+    keep = [r["keep"] for r in rows]
+    ymin = min(0.0, min(keep)) - 0.12
+    ymax = max(max(inter), max(keep)) + 0.18
+    # anything BELOW a threshold line would be a contact/collision -> shade it as the danger zone
+    ax2.axhspan(ymin, 0.0, color="#d96459", alpha=0.10, zorder=0)
+    ax2.scatter(idx, inter, color="#27a", s=48, zorder=3, label="inter-agent clearance")
+    ax2.scatter(idx, keep, color="#d96459", s=48, zorder=3, label="keep-out clearance")
+    ax2.axhline(R_COL, color="#27a", ls=":", lw=1.3)
+    ax2.axhline(0.0, color="#d96459", ls=":", lw=1.3)
+    ax2.text(N_SEEDS - 1, R_COL + 0.015, "inter-agent contact threshold",
+             color="#27a", fontsize=8, ha="right", va="bottom")
+    ax2.text(N_SEEDS - 1, 0.015, "keep-out surface (zero clearance)",
+             color="#d96459", fontsize=8, ha="right", va="bottom")
+    ax2.set_ylim(ymin, ymax)
+    ax2.set_xlabel("scenario (random seed)")
+    ax2.set_ylabel("min clearance  (distance beyond contact)")
+    ax2.legend(loc="center right", fontsize=8.5)
+    ax2.set_title("Every scenario stays safe\n(all points sit ABOVE their threshold → no contact)")
 
     fig.suptitle("COSMOS - multi-seed validation", fontsize=13, fontweight="bold")
     fig.tight_layout()

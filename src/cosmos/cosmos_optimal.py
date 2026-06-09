@@ -160,14 +160,14 @@ Qobs = np.vstack([start, tj_fuel_obs, goal])
 ax1.plot(lq_traj[:, 1], lq_traj[:, 0], color="k", lw=3, alpha=0.5,
          label=f"LQ optimum (E={Jstar:.2f})")
 ax1.plot(Qfuel[:, 1], Qfuel[:, 0], "--", color="#1d9e75", lw=2,
-         label=f"CHOMP fuel-aware ({E_fuel/Jstar:.2f}x)")
+         label=f"CHOMP fuel-aware ({E_fuel/Jstar:.2f}×)")
 ax1.plot(Qfree[:, 1], Qfree[:, 0], ":", color="#888", lw=2,
-         label=f"CHOMP free-space ({E_free/Jstar:.0f}x)")
+         label=f"CHOMP free-space ({E_free/Jstar:.0f}×)")
 th = np.linspace(0, 2 * np.pi, 120)
 ax1.fill(obs["c"][1] + obs["r"] * np.cos(th), obs["c"][0] + obs["r"] * np.sin(th),
          color="#d96459", alpha=0.15)
 ax1.plot(Qobs[:, 1], Qobs[:, 0], "-", color="#d96459", lw=2.4,
-         label=f"CHOMP + keep-out ({E_fuel_obs/Jstar:.2f}x)")
+         label=f"CHOMP + keep-out ({E_fuel_obs/Jstar:.2f}×)")
 ax1.scatter(start[1], start[0], c="k", zorder=5)
 ax1.scatter(goal[1], goal[0], c="r", marker="*", s=140, zorder=5)
 ax1.set_xlabel("along-track  y"); ax1.set_ylabel("radial  x")
@@ -180,10 +180,11 @@ vals = [Jstar, E_fuel, E_free, E_fuel_obs]
 cols = ["k", "#1d9e75", "#888", "#d96459"]
 ax2.bar(bars, vals, color=cols)
 ax2.set_yscale("log")
-ax2.set_ylabel("control energy  (int ||u||^2 dt, log scale)")
+ax2.set_ylim(min(vals) * 0.6, max(vals) * 2.6)   # headroom so the top label isn't clipped
+ax2.set_ylabel(r"control energy  $\int \|u\|^{2}\, dt$  (log scale)")
 ax2.set_title("Energy vs the analytical optimum")
 for i, v in enumerate(vals):
-    ax2.text(i, v * 1.05, f"{v/Jstar:.2f}x", ha="center", va="bottom", fontsize=9)
+    ax2.text(i, v * 1.07, f"{v/Jstar:.2f}×", ha="center", va="bottom", fontsize=9)
 ax2.annotate("Module B target\n(metric-aware projection)",
              xy=(3, E_fuel_obs), xytext=(2.0, E_fuel_obs * 0.45),
              fontsize=8, color="#7a2a1a", ha="center",

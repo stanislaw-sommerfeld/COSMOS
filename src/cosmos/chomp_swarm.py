@@ -259,13 +259,17 @@ if __name__ == "__main__":
     fig.savefig("chomp_part2_swarm.png", dpi=120)
     print("\nFigure -> chomp_part2_swarm.png")
 
-    fig2, ax = plt.subplots(figsize=(7, 4.5))
-    ax.plot(results["jacobi"]["hist"], label="Jacobi", color="#d98", lw=2)
-    ax.plot(results["gauss_seidel"]["hist"], label="Gauss-Seidel", color="#27a", lw=2)
+    fig2, ax = plt.subplots(figsize=(7.4, 4.6))
+    hj = results["jacobi"]["hist"]; hg = results["gauss_seidel"]["hist"]
+    ax.plot(hj, color="#d98", lw=0.8, alpha=0.45)
+    ax.plot(hg, color="#27a", lw=0.8, alpha=0.45)
+    ax.plot(np.minimum.accumulate(hj), color="#d98", lw=2.2, label="Jacobi (best so far)")
+    ax.plot(np.minimum.accumulate(hg), color="#27a", lw=2.2, label="Gauss-Seidel (best so far)")
     ax.set_yscale("log"); ax.legend(); ax.grid(alpha=0.3, which="both")
     ax.set_xlabel("iteration (full system sweep)")
-    ax.set_ylabel("system cost U (log)")
-    ax.set_title("Convergence: Jacobi vs Gauss-Seidel")
+    ax.set_ylabel(r"system cost $U$ (log)")
+    ax.set_title("Convergence: Jacobi vs Gauss-Seidel\n"
+                 "thin = raw cost (transient re-routing spikes) · thick = best-so-far")
     fig2.tight_layout()
     fig2.savefig("chomp_part2_convergence.png", dpi=120)
     print("Figure -> chomp_part2_convergence.png")

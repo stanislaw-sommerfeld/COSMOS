@@ -170,9 +170,14 @@ def main():
         ax1.scatter(starts[k][1], starts[k][0], color=colors[k], s=45, zorder=5)
         ax1.scatter(goals[k][1], goals[k][0], color=colors[k], marker="*",
                     s=170, zorder=5)
+    ax1.scatter([], [], color="#555", s=45, label="● start")
+    ax1.scatter([], [], color="#555", marker="*", s=150, label="★ goal (opposite lane)")
     ax1.set_xlabel("along-track  y"); ax1.set_ylabel("radial  x")
     ax1.set_aspect("equal"); ax1.grid(alpha=0.3)
-    ax1.set_title(f"Converged swarm (joint = Gauss-Seidel)\nmin clearance {clr_g:+.2f}")
+    ax1.legend(loc="upper center", fontsize=8.2, ncol=2)
+    ax1.set_title(f"The swap both methods converge to\n"
+                  f"4 agents cross to the opposite lane, held ≥ {clr_g:.2f} apart "
+                  f"(1 colour = 1 agent)")
 
     ax2.plot(h_joint, color="#2563EB", lw=2.0, label=f"joint (coupled), ~{it_j} it")
     ax2.plot(h_gs, "--", color="#DC2626", lw=2.0,

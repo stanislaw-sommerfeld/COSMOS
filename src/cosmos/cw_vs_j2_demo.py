@@ -109,14 +109,20 @@ def main():
     ax1.set_aspect("equal"); ax1.grid(alpha=0.3); ax1.legend(fontsize=8.2, loc="upper right")
     ax1.set_title(f"Same passive orbit under J2, real magnitude ({n_orbits} orbits)")
 
-    # panel 2: honest secular growth of the CW–J2 separation
-    ax2.plot(t_days, sep, color="#DC2626", lw=2.0)
-    ax2.fill_between(t_days, 0, sep, color="#DC2626", alpha=0.10)
-    ax2.set_xlabel("time  [days]"); ax2.set_ylabel("CW → J2 position error  [m]")
-    ax2.grid(alpha=0.3)
-    ax2.set_title("Secular drift: small per orbit, unbounded over time")
+    # panel 2: secular growth of the CW–J2 separation. The instantaneous error
+    # oscillates within each orbit, so we draw it faintly and overlay the secular
+    # ENVELOPE (running max) as the clean line that grows ~linearly with time.
+    env = np.maximum.accumulate(sep)
+    ax2.plot(t_days, sep, color="#DC2626", lw=0.5, alpha=0.30,
+             label="instantaneous error (oscillates each orbit)")
+    ax2.plot(t_days, env, color="#DC2626", lw=2.6,
+             label=r"secular envelope (grows $\propto t$)")
+    ax2.fill_between(t_days, 0, env, color="#DC2626", alpha=0.06)
+    ax2.set_xlabel("time  [days]"); ax2.set_ylabel(r"CW $\to$ J2 position error  [m]")
+    ax2.grid(alpha=0.3); ax2.legend(loc="upper left", fontsize=8.5)
+    ax2.set_title("Secular drift: tiny per orbit, but unbounded over time")
     ax2.annotate(f"≈ {abs(drift_per_day):.1f} m/day\nfor a {rho:.0f} m formation",
-                 xy=(t_days[-1], sep[-1]), xytext=(t_days[-1]*0.45, sep[-1]*0.78),
+                 xy=(t_days[-1], env[-1]), xytext=(t_days[-1] * 0.42, env[-1] * 0.66),
                  fontsize=10, color="#7a2a1a",
                  arrowprops=dict(arrowstyle="->", color="#7a2a1a", lw=1.2))
 

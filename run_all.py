@@ -106,8 +106,13 @@ def main():
     results = [(title, run(title, a)) for title, a in steps]
 
     if not args.no_tests and not args.smoke:
-        results.append(("Test suite (pytest)", run("Test suite (pytest)",
-                                                   ["-m", "pytest", "-q"], cwd=ROOT)))
+        import importlib.util
+        if importlib.util.find_spec("pytest") is None:
+            print(f"\n{'='*78}\n▶ Test suite (pytest)\n{'='*78}")
+            print("  ↳ skipped: pytest is not installed.  Install it with:  pip install pytest")
+        else:
+            results.append(("Test suite (pytest)", run("Test suite (pytest)",
+                                                       ["-m", "pytest", "-q"], cwd=ROOT)))
 
     # ---- summary ----
     after = sorted(FIG.glob("*.png"), key=lambda f: f.stat().st_mtime)
