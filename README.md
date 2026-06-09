@@ -135,11 +135,11 @@ The science is built up in layers, each a self-contained module inside the `cosm
 ```
                        cosmos.cli   ← unified mission driver (the `cosmos` command)
                             │
-        ┌───────────────────┼───────────────────────────┐
+        ┌───────────────────┼────────────────────────────┐
    fuel-aware CW      optimal benchmark            safe projection
    metric (B^T B)     (LQ / Gramian, Module A)     (Riemannian, Module B)
         │                   │                            │
-        └───────────────────┴───────────────────────────┘
+        └───────────────────┴────────────────────────────┘
                             │
               covariant CHOMP core  +  multi-agent decoupling
               (chomp_single_agent)     (chomp_swarm: Jacobi / Gauss–Seidel / priority)
