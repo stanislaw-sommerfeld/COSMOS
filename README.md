@@ -6,6 +6,7 @@
 
 *Covariant Optimization for Swarm Maneuvers in Orbital Space*
 
+[![Python]([https://stanislaw-sommerfeld.github.io/COSMOS/](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white))](https://stanislaw-sommerfeld.github.io/COSMOS/)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![NumPy](https://img.shields.io/badge/NumPy-013243?logo=numpy&logoColor=white)](https://numpy.org/)
 [![SciPy](https://img.shields.io/badge/SciPy-8CAAE6?logo=scipy&logoColor=white)](https://scipy.org/)
