@@ -276,6 +276,12 @@ def plot(trajs_fuel, trajs_free, starts, goals, obstacles, dim, K_X,
                        color=colors[k], s=40)
             ax.scatter(*[[goals[k][d] * K_X] for d in (1, 0, 2)],
                        color=colors[k], marker="*", s=150)
+        P = np.vstack([np.vstack([starts[k], trajs_fuel[k], goals[k]])
+                       for k in range(len(trajs_fuel))]) * K_X
+        L = 0.40 * (P[:, 0].max() - P[:, 0].min() + 1e-9)   # nadir = -radial (Earth off-scale)
+        xq, yq, zq = P[:, 1].min(), P[:, 0].max(), P[:, 2].max()
+        ax.quiver(xq, yq, zq, 0, -L, 0, color="#555", lw=2.0, arrow_length_ratio=0.22)
+        ax.text(xq, yq - L, zq, "nadir (→ Earth)", color="#555", fontsize=8)
         ax.set_xlabel("along-track y"); ax.set_ylabel("radial x")
         ax.set_zlabel("cross-track z")
     else:

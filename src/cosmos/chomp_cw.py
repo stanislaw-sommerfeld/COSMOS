@@ -133,26 +133,57 @@ def to_traj(flat, n):
 # 3. CW-CHOMP optimizer (single agent), covariant w.r.t. the fuel metric
 # ============================================================================
 def chomp_cw(start, goal, nm, n=60, dt=1.0, lam=1.0,
-             obstacle=None, eps=1.0, step=0.02, iters=400, w_bc=0.0):
+             obstacle=None, eps=1.0, step=0.02, iters=400, w_bc=0.0,
+             linesearch=True, tol=1e-7, c1=1e-4, beta=0.5, alpha0=1.0):
+    """Covariant CW-CHOMP descent in the fuel metric B^T B.
+
+    With ``linesearch=True`` (default) the fixed step is replaced by a
+    backtracking Armijo line search on the SAME cost the gradient descends
+    (fuel energy + the soft obstacle potential), and the loop stops once the
+    metric gradient norm sqrt(g^T M^-1 g) drops below ``tol``. Because
+    ``Minv = (B^T B)^-1`` is the exact Gauss-Newton preconditioner, the
+    obstacle-free problem is solved by a single unit step (alpha=1), so the
+    1.00x-vs-LQ result no longer depends on the iteration budget. Set
+    ``linesearch=False`` for the legacy fixed-step behaviour.
+    """
     start = np.asarray(start, float); goal = np.asarray(goal, float)
-    B, Minv, blocks = cw_operators(n, dt, nm, w_bc=w_bc)
+    B, Minv, blocks = cw_operators(n, dt, nm, w_bc=w_bc, dim=len(start))
     c0 = cw_offset(blocks, start, goal)
 
     traj = np.linspace(start, goal, n + 2)[1:-1].copy()
     init = traj.copy()
     hist = []
-    for _ in range(iters):
-        xi = to_flat(traj)
-        U = B @ xi + c0
-        g_fuel = B.T @ U                                  # grad of 1/2||u||^2
-        g = lam * g_fuel
+
+    def cost_grad(tr):
+        r = B @ to_flat(tr) + c0
+        U_fuel = 0.5 * float(np.sum(r ** 2))
+        g = lam * (B.T @ r)
+        F = lam * U_fuel
         if obstacle is not None:
-            g_obs, _ = obstacle_gradient(traj, start, goal, dt,
-                                         obstacle["c"], obstacle["r"], eps)
+            g_obs, F_obs = obstacle_gradient(tr, start, goal, dt,
+                                             obstacle["c"], obstacle["r"], eps)
             g = g + to_flat(g_obs)
-        xi = xi - step * (Minv @ g)
-        traj = to_traj(xi, n)
-        hist.append(0.5 * np.sum(U ** 2))
+            F = F + float(F_obs)
+        return F, g, U_fuel
+
+    for _ in range(iters):
+        F, g, U_fuel = cost_grad(traj)
+        hist.append(U_fuel)
+        p = -(Minv @ g)                               # covariant descent direction
+        if not linesearch:
+            traj = to_traj(to_flat(traj) + step * p, n)
+            continue
+        slope = float(g @ p)                          # = -g^T M^-1 g <= 0
+        if np.sqrt(max(-slope, 0.0)) < tol:           # near-stationary -> done
+            break
+        a, xi0, cand = alpha0, to_flat(traj), None    # backtracking Armijo
+        while a > 1e-12:
+            cand = to_traj(xi0 + a * p, n)
+            if cost_grad(cand)[0] <= F + c1 * a * slope:
+                break
+            a *= beta
+        traj = cand
+    hist.append(cost_grad(traj)[2])                   # final fuel energy
     return traj, init, np.array(hist)
 
 
@@ -276,61 +307,100 @@ def delta_v(traj, start, goal, dt, nm):
 # 5. EXPERIMENT: free-space plan vs fuel-aware plan, scored on true delta-v
 # ============================================================================
 if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser(
+        description="Fuel-aware CW-CHOMP demo, in 2D (radial/along-track) or 3D (+cross-track).")
+    ap.add_argument("--dim", type=int, choices=[2, 3], default=2,
+                    help="2 = in-plane (default); 3 = adds the cross-track oscillator z")
+    DIM = ap.parse_args().dim
+
     nm_true = 1.0                     # true mean motion (normalized units)
     T = np.pi                         # maneuver duration ~ half an orbit (strong drift)
     N = 60
     dt = T / (N + 1)
-    start = np.array([3.0, 5.0])      # relative position in the Hill frame
-    goal = np.array([0.0, 0.0])       # rendezvous to the target at the origin
+    if DIM == 2:
+        start = np.array([3.0, 5.0]); goal = np.array([0.0, 0.0])
+        obs = {"c": np.array([1.0, 2.6]), "r": 1.3}
+        WBC = 0.0
+    else:
+        start = np.array([3.0, 5.0, 2.0]); goal = np.array([0.0, 0.0, 0.0])
+        obs = {"c": np.array([1.0, 2.6, 0.8]), "r": 1.3}
+        WBC = 2000.0   # rest-to-rest: regularizes the cross-track oscillator (T=pi is its resonance)
 
     def run_scenario(obstacle, eps=0.8):
-        tf, _, _ = chomp_cw(start, goal, nm=0.0, n=N, dt=dt,
-                            obstacle=obstacle, eps=eps, iters=400)
-        tu, _, h = chomp_cw(start, goal, nm=nm_true, n=N, dt=dt,
-                            obstacle=obstacle, eps=eps, iters=400)
-        dvf, ef = delta_v(tf, start, goal, dt, nm_true)
-        dvu, eu = delta_v(tu, start, goal, dt, nm_true)
-        return tf, tu, h, (dvf, ef), (dvu, eu)
+        tf, _, _ = chomp_cw(start, goal, nm=0.0, n=N, dt=dt, obstacle=obstacle, eps=eps, w_bc=WBC)
+        tu, _, _ = chomp_cw(start, goal, nm=nm_true, n=N, dt=dt, obstacle=obstacle, eps=eps, w_bc=WBC)
+        dvf, _ = delta_v(tf, start, goal, dt, nm_true)
+        dvu, _ = delta_v(tu, start, goal, dt, nm_true)
+        return tf, tu, dvf, dvu
 
-    # Scenario A: free transfer (no obstacle) -> clean illustration
-    tfA, tuA, hA, (dvfA, _), (dvuA, _) = run_scenario(None)
-    # Scenario B: a keep-out zone blocks the natural coast -> realistic delta-v
-    obs = {"c": np.array([1.0, 2.6]), "r": 1.3}
-    tfB, tuB, hB, (dvfB, _), (dvuB, _) = run_scenario(obs, eps=0.8)
+    tfA, tuA, dvfA, dvuA = run_scenario(None)
+    tfB, tuB, dvfB, dvuB = run_scenario(obs, eps=0.8)
 
-    print("=== Part III: fuel-aware vs free-space (scored under true CW) ===")
+    print(f"=== Part III ({DIM}D): fuel-aware vs free-space (scored under true CW) ===")
     print(f"Scenario A (no keep-out):")
     print(f"  free-space delta-v = {dvfA:.3f}   fuel-aware delta-v = {dvuA:.3f}"
           f"   -> {100*(dvfA-dvuA)/dvfA:+.0f}%  (fuel-aware ~ natural coast)")
     print(f"Scenario B (keep-out blocks the coast):")
     print(f"  free-space delta-v = {dvfB:.3f}   fuel-aware delta-v = {dvuB:.3f}"
           f"   -> {100*(dvfB-dvuB)/dvfB:+.0f}%  (both pay, fuel-aware cheaper)")
-    # sanity: nm=0 scored under nm=0 must be ~0 for the straight line
-    dv0, _ = delta_v(tfA, start, goal, dt, 0.0)
-    print(f"  [sanity] free-space plan scored at nm=0: delta-v = {dv0:.4f} (~0 expected)")
+    if WBC == 0.0:        # the ~0 invariant only holds without the rest-to-rest penalty
+        dv0, _ = delta_v(tfA, start, goal, dt, 0.0)
+        print(f"  [sanity] free-space plan scored at nm=0: delta-v = {dv0:.4f} (~0 expected)")
 
-    # ---------- figure ----------
-    fig, axes = plt.subplots(1, 2, figsize=(12.5, 5.4))
-    for ax, (tf, tu, dvf, dvu, ob, ttl) in zip(
-            axes,
-            [(tfA, tuA, dvfA, dvuA, None, "A: free transfer"),
-             (tfB, tuB, dvfB, dvuB, obs, "B: with keep-out")]):
-        Qf = np.vstack([start, tf, goal]); Qu = np.vstack([start, tu, goal])
-        if ob is not None:
-            th = np.linspace(0, 2*np.pi, 120)
-            ax.fill(ob["c"][1] + ob["r"]*np.cos(th), ob["c"][0] + ob["r"]*np.sin(th),
-                    color="#d96459", alpha=0.30)
-        ax.plot(Qf[:, 1], Qf[:, 0], "--", color="#888", lw=2,
-                label=f"free-space  (dv={dvf:.2f})")
-        ax.plot(Qu[:, 1], Qu[:, 0], "-", color="#1d9e75", lw=2.6,
-                label=f"fuel-aware  (dv={dvu:.2f})")
-        ax.scatter(start[1], start[0], c="k", zorder=5, label="start")
-        ax.scatter(goal[1], goal[0], c="r", marker="*", s=130, zorder=5, label="target")
-        ax.set_xlabel("along-track  y"); ax.set_ylabel("radial  x")
-        ax.set_aspect("equal"); ax.grid(alpha=0.3); ax.legend(fontsize=9)
-        ax.set_title(ttl)
-    fig.suptitle("COSMOS - Part III: fuel-aware CHOMP in the Hill frame "
-                 "(Clohessy-Wiltshire)", fontsize=13, fontweight="bold")
+    # ---------- figure (2D or 3D, plot axes: x=along-track, y=radial, z=cross-track) ----------
+    def nadir_3d(ax, P):
+        """Earth is ~6878 km below along -radial (off-scale); show the direction."""
+        along, rad, cross = P[:, 1], P[:, 0], P[:, 2]
+        L = 0.40 * (rad.max() - rad.min() + 1e-9)
+        xq, yq, zq = along.min(), rad.max(), cross.max()
+        ax.quiver(xq, yq, zq, 0, -L, 0, color="#555", lw=2.0, arrow_length_ratio=0.22)
+        ax.text(xq, yq - L, zq, "nadir (→ Earth)", color="#555", fontsize=8)
+
+    panels = [(tfA, tuA, dvfA, dvuA, None, "A: free transfer"),
+              (tfB, tuB, dvfB, dvuB, obs, "B: with keep-out")]
+
+    if DIM == 2:
+        fig, axes = plt.subplots(1, 2, figsize=(12.5, 5.4))
+        for ax, (tf, tu, dvf, dvu, ob, ttl) in zip(axes, panels):
+            Qf = np.vstack([start, tf, goal]); Qu = np.vstack([start, tu, goal])
+            if ob is not None:
+                th = np.linspace(0, 2*np.pi, 120)
+                ax.fill(ob["c"][1] + ob["r"]*np.cos(th), ob["c"][0] + ob["r"]*np.sin(th),
+                        color="#d96459", alpha=0.30)
+            ax.plot(Qf[:, 1], Qf[:, 0], "--", color="#888", lw=2, label=f"free-space  (dv={dvf:.2f})")
+            ax.plot(Qu[:, 1], Qu[:, 0], "-", color="#1d9e75", lw=2.6, label=f"fuel-aware  (dv={dvu:.2f})")
+            ax.scatter(start[1], start[0], c="k", zorder=5, label="start")
+            ax.scatter(goal[1], goal[0], c="r", marker="*", s=130, zorder=5, label="target")
+            ax.set_xlabel("along-track  y"); ax.set_ylabel("radial  x")
+            ax.set_aspect("equal"); ax.grid(alpha=0.3); ax.legend(fontsize=9); ax.set_title(ttl)
+        out = "chomp_part3_cw.png"
+        fig.suptitle("COSMOS - Part III: fuel-aware CHOMP in the Hill frame "
+                     "(Clohessy-Wiltshire)", fontsize=13, fontweight="bold")
+    else:
+        fig = plt.figure(figsize=(13, 5.8))
+        for j, (tf, tu, dvf, dvu, ob, ttl) in enumerate(panels):
+            ax = fig.add_subplot(1, 2, j + 1, projection="3d")
+            Qf = np.vstack([start, tf, goal]); Qu = np.vstack([start, tu, goal])
+            if ob is not None:
+                u, v = np.mgrid[0:2*np.pi:20j, 0:np.pi:12j]
+                ax.plot_surface(ob["c"][1] + ob["r"]*np.cos(u)*np.sin(v),
+                                ob["c"][0] + ob["r"]*np.sin(u)*np.sin(v),
+                                ob["c"][2] + ob["r"]*np.cos(v),
+                                color="#d96459", alpha=0.12, linewidth=0)
+            ax.plot(Qf[:, 1], Qf[:, 0], Qf[:, 2], "--", color="#888", lw=1.8,
+                    label=f"free-space  (dv={dvf:.2f})")
+            ax.plot(Qu[:, 1], Qu[:, 0], Qu[:, 2], "-", color="#1d9e75", lw=2.6,
+                    label=f"fuel-aware  (dv={dvu:.2f})")
+            ax.scatter(start[1], start[0], start[2], c="k", s=40, label="start")
+            ax.scatter(goal[1], goal[0], goal[2], c="r", marker="*", s=130, label="target")
+            nadir_3d(ax, np.vstack([Qf, Qu]))
+            ax.set_xlabel("along-track y"); ax.set_ylabel("radial x"); ax.set_zlabel("cross-track z")
+            ax.legend(fontsize=8); ax.set_title(ttl)
+        out = "chomp_part3_cw_3d.png"
+        fig.suptitle("COSMOS - Part III (3D): fuel-aware CHOMP in the Hill frame "
+                     "(Clohessy-Wiltshire, with cross-track)", fontsize=13, fontweight="bold")
+
     fig.tight_layout()
-    fig.savefig("chomp_part3_cw.png", dpi=120)
-    print("\nFigure -> chomp_part3_cw.png")
+    fig.savefig(out, dpi=120)
+    print(f"\nFigure -> {out}")

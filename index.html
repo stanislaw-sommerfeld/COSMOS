@@ -207,6 +207,7 @@
       <a href="#results">Results</a>
       <a href="#contributions">Contributions</a>
       <a href="#architecture">Architecture</a>
+      <a href="#references">References</a>
       <a href="cosmos_demo.html">Live demo</a>
       <a href="#start">Get started</a>
       <a class="btn ghost" href="https://github.com/stanislaw-sommerfeld/COSMOS">GitHub ↗</a>
@@ -275,7 +276,7 @@
       <p>Every claim below is reproduced by a script in the repository.</p>
     </div>
     <div class="stats reveal">
-      <div class="stat" style="--c:var(--cyan)"><div class="num" data-to="53" data-suffix="%">0%</div><div class="unit">± 10%</div><div class="lab">Δv saved vs. dynamics-blind, over 10 random scenarios</div></div>
+      <div class="stat" style="--c:var(--cyan)"><div class="num" data-to="40" data-suffix="%">0%</div><div class="unit">± 10%</div><div class="lab">Δv saved vs. dynamics-blind, over 10 random scenarios</div></div>
       <div class="stat" style="--c:var(--mint)"><div class="num" data-to="1.00" data-dec="2" data-suffix="×">0×</div><div class="unit">optimal</div><div class="lab">matches the analytical LQ / Gramian optimum</div></div>
       <div class="stat" style="--c:var(--peri)"><div class="num" data-to="100" data-suffix="%">0%</div><div class="unit">safe</div><div class="lab">collision-free success rate (hardened mode)</div></div>
       <div class="stat" style="--c:var(--cyan)"><div class="num" data-to="1.69" data-dec="2" data-suffix="×">0×</div><div class="unit">safety premium</div><div class="lab">keep-out cost cut from 15× (metric-aware projection)</div></div>
@@ -394,6 +395,27 @@ python -m cosmos.cosmos_safe     <span class="ok"># 15× → 1.69× safety fix</
       <div class="figframe"><img src="figures/cosmos_units.png" alt="realistic LEO units"/></div>
       <div class="figframe"><img src="figures/orbital_sim.gif" alt="live animation"/></div>
     </div>
+  </section>
+
+  <!-- REFERENCES -->
+  <section id="references">
+    <div class="sec-head reveal">
+      <div class="eyebrow">References</div>
+      <h2>Prior work this builds on</h2>
+      <p>COSMOS stands on established results in motion planning, optimal control, and astrodynamics — the contribution is the bridge between them.</p>
+    </div>
+    <ol class="reveal" style="color:var(--mut);font-size:14.5px;line-height:1.7;padding-left:22px;margin:0;column-width:340px;column-gap:46px">
+      <li style="break-inside:avoid;margin-bottom:11px">N. Ratliff, M. Zucker, J. A. Bagnell, S. Srinivasa. <i style="color:var(--txt)">CHOMP: Gradient optimization techniques for efficient motion planning.</i> IEEE ICRA, 2009.</li>
+      <li style="break-inside:avoid;margin-bottom:11px">M. Zucker, N. Ratliff, A. Dragan, et al. <i style="color:var(--txt)">CHOMP: Covariant Hamiltonian optimization for motion planning.</i> Int. J. Robotics Research, 2013.</li>
+      <li style="break-inside:avoid;margin-bottom:11px">W. H. Clohessy, R. S. Wiltshire. <i style="color:var(--txt)">Terminal guidance system for satellite rendezvous.</i> J. of the Aerospace Sciences, 1960.</li>
+      <li style="break-inside:avoid;margin-bottom:11px">S. A. Schweighart, R. J. Sedwick. <i style="color:var(--txt)">High-fidelity linearized J2 model for satellite formation flight.</i> J. Guidance, Control, and Dynamics, 2002.</li>
+      <li style="break-inside:avoid;margin-bottom:11px">J. Tschauner, P. Hempel. <i style="color:var(--txt)">Rendezvous with a target in an elliptical orbit.</i> Astronautica Acta, 1965.</li>
+      <li style="break-inside:avoid;margin-bottom:11px">A. E. Bryson, Y.-C. Ho. <i style="color:var(--txt)">Applied Optimal Control</i> (LQ regulator, controllability Gramian). Hemisphere, 1975.</li>
+      <li style="break-inside:avoid;margin-bottom:11px">H. W. Kuhn. <i style="color:var(--txt)">The Hungarian method for the assignment problem.</i> Naval Research Logistics Quarterly, 1955.</li>
+      <li style="break-inside:avoid;margin-bottom:11px">S. Boyd, N. Parikh, E. Chu, B. Peleato, J. Eckstein. <i style="color:var(--txt)">Distributed optimization and statistical learning via the ADMM.</i> Found. &amp; Trends in ML, 2011.</li>
+      <li style="break-inside:avoid;margin-bottom:11px">J. Nocedal, S. J. Wright. <i style="color:var(--txt)">Numerical Optimization</i> (Gauss–Newton, Levenberg–Marquardt). Springer, 2006.</li>
+      <li style="break-inside:avoid;margin-bottom:11px">H. Schaub, J. L. Junkins. <i style="color:var(--txt)">Analytical Mechanics of Space Systems</i> (relative orbital motion, formation flying). AIAA, 2018.</li>
+    </ol>
   </section>
 
 </div>

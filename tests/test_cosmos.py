@@ -129,6 +129,22 @@ def test_descent_reaches_closed_form_optimum():
 
 
 # ---------------------------------------------------------------------------
+# T8 - line-search reaches the closed-form optimum tightly, in a few iterations
+# ---------------------------------------------------------------------------
+def test_linesearch_converges_fast_and_exactly():
+    N = 60
+    T = np.pi
+    dt = T / (N + 1)
+    nm = 1.0
+    start, goal = np.array([3.0, 5.0]), np.array([0.0, 0.0])
+    t_ls, _, hist = chomp_cw(start, goal, nm=nm, n=N, dt=dt)   # line-search on by default
+    t_cf = cw_unconstrained_optimum(start, goal, nm=nm, n=N, dt=dt)
+    rel = np.linalg.norm(to_flat(t_ls) - to_flat(t_cf)) / np.linalg.norm(to_flat(t_cf))
+    assert rel < 1e-3, f"line-search off the closed-form optimum by {rel:.3%}"
+    assert len(hist) < 25, f"line-search took {len(hist)} iterations (expected a handful)"
+
+
+# ---------------------------------------------------------------------------
 # T6 - the full mission is collision-free with Riemannian safety
 # ---------------------------------------------------------------------------
 def test_mission_is_collision_free():
