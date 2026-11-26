@@ -239,7 +239,7 @@ cosmos/
 
 Two additions that answer the two hardest questions about the method.
 
-**4 · A time-varying metric for eccentric orbits (Tschauner–Hempel).** Clohessy–Wiltshire assumes a *circular* reference orbit. Around an **eccentric** orbit the linearized relative dynamics are time-varying, and a CW-"passive" relative orbit drifts by many times its own amplitude per revolution. COSMOS's construction generalizes with a single change — the dynamics block becomes $G(t)$, so $B = D_2 - G(t)$ — and nothing else moves. Planning in the correct time-varying metric and scoring against the **full nonlinear** relative equations of motion, the Δv saving climbs from ~0% at $e=0$ (CW is validated for circular LEO) to **~16% at $e=0.3$**. The metric matters exactly when the dynamics do.
+**4 · A time-varying metric for eccentric orbits (Tschauner–Hempel).** Clohessy–Wiltshire assumes a *circular* reference orbit. Around an **eccentric** orbit the linearized relative dynamics are time-varying, and a CW-"passive" relative orbit drifts by many times its own amplitude per revolution. COSMOS's construction generalizes with a single change — the dynamics block becomes $G(t)$, so $B = D_2 - G(t)$ — and nothing else moves. Planning in the correct time-varying metric and scoring against the **full nonlinear** relative equations of motion, the Δv saving climbs from ~0% at $e=0$ (CW is validated for circular LEO) to **~16% at $e=0.3$**. The metric matters exactly when the dynamics do. This now holds **in 3D** as well: the cross-track mode becomes the true time-varying gravity gradient $z''=-(\mu/r^3)z$, and the saving curve is essentially unchanged with the out-of-plane component included.
 
 ```bash
 python -m cosmos.cosmos_eccentric   # saving-vs-eccentricity curve
