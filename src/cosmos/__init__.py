@@ -42,6 +42,9 @@ from ._core import (
     project_euclid,
     project_metric,
     spd_inverse,
+    time_varying_operators,
+    time_varying_offset,
+    tschauner_hempel_coeffs,
 )
 
 __all__ = [
@@ -52,4 +55,5 @@ __all__ = [
     "cw_state_matrices", "controllability_gramian",
     "lq_optimal_energy", "lq_optimal_trajectory",
     "project_euclid", "project_metric", "spd_inverse",
+    "time_varying_operators", "time_varying_offset", "tschauner_hempel_coeffs",
 ]

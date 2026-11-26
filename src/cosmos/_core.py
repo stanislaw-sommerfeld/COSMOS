@@ -219,3 +219,128 @@ def spd_inverse(M, ridge=1e-9):
     n = M.shape[0]
     c = cho_factor(M + ridge * np.eye(n), lower=True)
     return cho_solve(c, np.eye(n))
+
+
+# ============================================================================
+# 6. Time-varying linear relative dynamics  (B = D2 - G(t))
+# ============================================================================
+#
+# COSMOS's constant-coefficient operators (chomp_cw.cw_operators,
+# linear_relative_operators) cover free space, Clohessy-Wiltshire and the
+# Schweighart-Sedwick J2 model -- all linear and TIME-INVARIANT. The natural and
+# most valuable generalization is the TIME-VARYING case: relative motion about an
+# ECCENTRIC reference orbit (Tschauner-Hempel / Lawden). There the coupling block
+# G depends on the true anomaly, so each waypoint sees a different G(t_k) -- yet
+# the construction B = D2 - G is otherwise identical, which is exactly the
+# "metric = dynamics" claim, now for a time-varying metric.
+#
+# This matters because the CW approximation is genuinely poor for eccentric
+# references (a CW-"passive" relative orbit can drift by many times its own
+# amplitude in a single revolution), so planning in the correct time-varying
+# metric produces a large, honest fuel saving -- unlike the LEO/J2 case where the
+# mismatch is ~1e-5 and CW is already adequate.
+
+
+def tschauner_hempel_coeffs(t, e, nm, a=1.0, mu=1.0):
+    """Planar time-varying coefficient blocks (Kx, Kv) of the linearized relative
+       motion about an eccentric reference orbit (semi-major axis ``a``,
+       eccentricity ``e``, mean motion ``nm``), in the rotating LVLH/Hill frame
+       (x = radial, y = along-track):
+
+           x'' = (theta_dot^2 + 2 mu/r^3) x + theta_ddot y + 2 theta_dot y' + u_x
+           y'' = -theta_ddot x + (theta_dot^2 - mu/r^3) y - 2 theta_dot x' + u_y
+
+       so  [x'';y''] = Kx [x;y] + Kv [x';y'] + u, with Kx, Kv evaluated at the
+       reference anomaly reached at time ``t`` (Kepler-solved). As e -> 0 this
+       reduces to the Clohessy-Wiltshire blocks exactly."""
+    M = nm * t
+    E = M
+    for _ in range(60):                       # Newton solve of Kepler's equation
+        E = E - (E - e * np.sin(E) - M) / (1.0 - e * np.cos(E))
+    nu = 2.0 * np.arctan2(np.sqrt(1 + e) * np.sin(E / 2),
+                          np.sqrt(1 - e) * np.cos(E / 2))
+    r = a * (1.0 - e * np.cos(E))
+    h = np.sqrt(mu * a * (1.0 - e ** 2))
+    thd = h / r ** 2                          # reference angular rate
+    rdot = mu / h * e * np.sin(nu)
+    thdd = -2.0 * rdot * thd / r              # reference angular acceleration
+    g = mu / r ** 3
+    Kx = np.array([[thd ** 2 + 2 * g, thdd],
+                   [-thdd, thd ** 2 - g]])
+    Kv = np.array([[0.0, 2 * thd],
+                   [-2 * thd, 0.0]])
+    return Kx, Kv
+
+
+def time_varying_operators(n, dt, coeff_fn, w_bc=0.0):
+    """Control operator B = D2 - G(t) for 2D planar TIME-VARYING linear relative
+       dynamics. ``coeff_fn(t)`` must return the blocks ``(Kx, Kv)`` (2x2 each)
+       such that  [x'';y''] = Kx [x;y] + Kv [x';y'] + u  at time ``t``.
+
+       Returns ``(B, (B^T B)^-1, blocks)`` with the same interface as
+       chomp_cw.cw_operators / linear_relative_operators, so the covariant solver,
+       the closed-form optimum and the metric-aware projections all apply
+       unchanged. ``w_bc>0`` appends the four rest-to-rest boundary-velocity rows."""
+    D2 = np.zeros((n, n + 2)); D1 = np.zeros((n, n + 2))
+    for t in range(n):
+        D2[t, t] = 1.0; D2[t, t + 1] = -2.0; D2[t, t + 2] = 1.0
+        D1[t, t] = -1.0; D1[t, t + 2] = 1.0
+    D2 /= dt ** 2; D1 /= (2.0 * dt)
+    D2f, D2b = D2[:, 1:n + 1], D2[:, [0, n + 1]]
+    D1f, D1b = D1[:, 1:n + 1], D1[:, [0, n + 1]]
+    I = np.eye(n)
+
+    Bxx = D2f.copy(); Bxy = np.zeros((n, n))
+    Byx = np.zeros((n, n)); Byy = D2f.copy()
+    # per-waypoint (row) coefficients -> subtract G(t_k) from that row
+    Kx_all = np.zeros((n, 2, 2)); Kv_all = np.zeros((n, 2, 2))
+    for t in range(n):
+        tt = (t + 1) * dt                      # interior waypoint time
+        Kx, Kv = coeff_fn(tt)
+        Kx_all[t] = Kx; Kv_all[t] = Kv
+        Bxx[t] -= Kx[0, 0] * I[t] + Kv[0, 0] * D1f[t]
+        Bxy[t] -= Kx[0, 1] * I[t] + Kv[0, 1] * D1f[t]
+        Byx[t] -= Kx[1, 0] * I[t] + Kv[1, 0] * D1f[t]
+        Byy[t] -= Kx[1, 1] * I[t] + Kv[1, 1] * D1f[t]
+    B = np.block([[Bxx, Bxy], [Byx, Byy]])
+
+    sw = np.sqrt(w_bc)
+    if w_bc > 0.0:
+        R = np.zeros((4, 2 * n))
+        R[0, 0] = sw / dt; R[1, n - 1] = -sw / dt
+        R[2, n] = sw / dt; R[3, 2 * n - 1] = -sw / dt
+        B = np.vstack([B, R])
+
+    M = B.T @ B + 1e-9 * np.eye(2 * n)
+    Minv = spd_inverse(M)
+    blocks = dict(D2b=D2b, D1b=D1b, dt=dt, n=n, sw=sw, w_bc=w_bc,
+                  Kx=Kx_all, Kv=Kv_all)
+    return B, Minv, blocks
+
+
+def time_varying_offset(blocks, start, goal):
+    """Constant term c0 so that  u = B xi + c0  for the time-varying operator.
+       The fixed endpoints feed the D2/D1 boundary columns AND the per-row G(t)
+       velocity coupling (the radial/along-track Coriolis term), so c0 carries a
+       Kv contribution that the constant-coefficient offset did not need."""
+    D2b, D1b = blocks["D2b"], blocks["D1b"]
+    dt, n = blocks["dt"], blocks["n"]
+    Kv = blocks["Kv"]
+    ex = np.array([start[0], goal[0]]); ey = np.array([start[1], goal[1]])
+    # D2 boundary contribution (same as the constant-coefficient case)
+    c0x = D2b @ ex
+    c0y = D2b @ ey
+    # subtract the velocity-coupling of the FIXED endpoints: only the first/last
+    # interior rows see a boundary point through the centered velocity stencil D1b.
+    # D1b has nonzero entries only at waypoints 0 (start col) and n-1 (goal col).
+    vx_bc = D1b @ ex            # length-n, nonzero at rows 0 and n-1
+    vy_bc = D1b @ ey
+    for t in range(n):
+        c0x[t] -= Kv[t, 0, 0] * vx_bc[t] + Kv[t, 0, 1] * vy_bc[t]
+        c0y[t] -= Kv[t, 1, 0] * vx_bc[t] + Kv[t, 1, 1] * vy_bc[t]
+    c0 = np.concatenate([c0x, c0y])
+    if blocks["w_bc"] > 0.0:
+        sw = blocks["sw"]
+        c0 = np.concatenate([c0, np.array([-sw * start[0] / dt, sw * goal[0] / dt,
+                                           -sw * start[1] / dt, sw * goal[1] / dt])])
+    return c0
