@@ -70,14 +70,21 @@ def reference_kinematics(t, e):
     return r, thd, thdd
 
 
-def true_relative_accel(t, x, y, vx, vy, e):
+def true_relative_accel(t, x, v, e):
     """Exact (nonlinear) relative acceleration in the rotating LVLH frame about an
-       eccentric orbit -- the GROUND TRUTH both plans are scored against."""
+       eccentric orbit -- the GROUND TRUTH both plans are scored against. Handles
+       2D (x = [radial, along-track]) and 3D (+ cross-track z); the cross-track
+       term is the pure nonlinear gravity gradient -MU*z/rc^3."""
     r, thd, thdd = reference_kinematics(t, e)
-    rc = np.sqrt((r + x) ** 2 + y ** 2)
-    ax = thdd * y + 2 * thd * vy + thd ** 2 * x - MU * (r + x) / rc ** 3 + MU / r ** 2
-    ay = -thdd * x - 2 * thd * vx + thd ** 2 * y - MU * y / rc ** 3
-    return ax, ay
+    xr, ya = x[0], x[1]
+    za = x[2] if len(x) == 3 else 0.0
+    rc = np.sqrt((r + xr) ** 2 + ya ** 2 + za ** 2)
+    ax = thdd * ya + 2 * thd * v[1] + thd ** 2 * xr - MU * (r + xr) / rc ** 3 + MU / r ** 2
+    ay = -thdd * xr - 2 * thd * v[0] + thd ** 2 * ya - MU * ya / rc ** 3
+    if len(x) == 3:
+        az = -MU * za / rc ** 3
+        return np.array([ax, ay, az])
+    return np.array([ax, ay])
 
 
 # ---------------------------------------------------------------------------
@@ -85,9 +92,11 @@ def true_relative_accel(t, x, y, vx, vy, e):
 # ---------------------------------------------------------------------------
 def plan(metric_e, start, goal, n, dt, w_bc=2.0e4):
     """Closed-form energy-optimal rest-to-rest plan in the metric of eccentricity
-       ``metric_e`` (0 -> CW metric; e -> the correct time-varying TH metric)."""
-    coeff = lambda tt: tschauner_hempel_coeffs(tt, metric_e, NM, a=A_REF, mu=MU)
-    B, Minv, blocks = time_varying_operators(n, dt, coeff, w_bc=w_bc)
+       ``metric_e`` (0 -> CW metric; e -> the correct time-varying TH metric).
+       2D or 3D, inferred from len(start)."""
+    dim = len(start)
+    coeff = lambda tt: tschauner_hempel_coeffs(tt, metric_e, NM, a=A_REF, mu=MU, dim=dim)
+    B, Minv, blocks = time_varying_operators(n, dt, coeff, w_bc=w_bc, dim=dim)
     c0 = time_varying_offset(blocks, start, goal)
     xi = -Minv @ (B.T @ c0)                      # unconstrained optimum = GN step
     return to_traj(xi, n)
@@ -98,9 +107,8 @@ def plan(metric_e, start, goal, n, dt, w_bc=2.0e4):
 # ---------------------------------------------------------------------------
 def realized_delta_v(traj, start, goal, dt, e):
     """Delta-v (L1) a thruster must supply to realize ``traj`` under the true
-       eccentric dynamics: u_t = a_t^(plan) - f_true(x_t, v_t, t), summed |u|*dt.
-       This scores the PLAN (its finite-difference accelerations) against the real
-       free dynamics, so a plan that rides the true natural motion costs less."""
+       eccentric dynamics (2D or 3D): u_t = a_t^(plan) - f_true(x_t, v_t, t),
+       summed |u|*dt. A plan that rides the true natural motion costs less."""
     Q = np.vstack([start, traj, goal])
     n = traj.shape[0]
     dv = 0.0
@@ -108,8 +116,7 @@ def realized_delta_v(traj, start, goal, dt, e):
         x = Q[t + 1]
         v = (Q[t + 2] - Q[t]) / (2.0 * dt)
         a = (Q[t + 2] - 2.0 * Q[t + 1] + Q[t]) / dt ** 2
-        fx, fy = true_relative_accel((t + 1) * dt, x[0], x[1], v[0], v[1], e)
-        u = a - np.array([fx, fy])
+        u = a - true_relative_accel((t + 1) * dt, x, v, e)
         dv += np.linalg.norm(u) * dt
     return dv
 
@@ -119,7 +126,7 @@ def passive_drift(e, rho=1.0e-3, orbits=1.0):
        eccentric dynamics in ``orbits`` revolutions, as a fraction of amplitude."""
     s0 = [rho, 0.0, 0.0, -2.0 * NM * rho]
     sol = solve_ivp(lambda t, s: [s[2], s[3],
-                                  *true_relative_accel(t, s[0], s[1], s[2], s[3], e)],
+                                  *true_relative_accel(t, s[:2], s[2:], e)],
                     [0, orbits * PERIOD], s0, max_step=PERIOD / 2000,
                     rtol=1e-10, atol=1e-12)
     drift = np.hypot(sol.y[0, -1] - s0[0], sol.y[1, -1] - s0[1])
@@ -130,13 +137,19 @@ def passive_drift(e, rho=1.0e-3, orbits=1.0):
 # 4. Experiment
 # ---------------------------------------------------------------------------
 def run(eccentricities=(0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5), N=90,
-        orbits=1.0, verbose=True):
+        orbits=1.0, dim=2, verbose=True):
     """For each eccentricity, plan with the CW metric and with the TH metric, score
-       both under true eccentric dynamics, and return the saving curve."""
+       both under the true (nonlinear) eccentric dynamics, and return the saving
+       curve. ``dim=3`` adds an out-of-plane (cross-track) component to the
+       transfer and scores against the full 3D nonlinear relative motion."""
     T = orbits * PERIOD
     dt = T / (N + 1)
-    start = np.array([0.08, 0.20])      # radial, along-track (normalized)
-    goal = np.array([0.05, 0.0])
+    if dim == 2:
+        start = np.array([0.08, 0.20])            # radial, along-track (normalized)
+        goal = np.array([0.05, 0.0])
+    else:
+        start = np.array([0.08, 0.20, 0.06])      # + cross-track z
+        goal = np.array([0.05, 0.0, 0.0])
     rows = []
     for e in eccentricities:
         t_cw = plan(0.0, start, goal, N, dt)      # circular-orbit metric (baseline)
@@ -148,7 +161,8 @@ def run(eccentricities=(0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5), N=90,
                          drift=passive_drift(e, orbits=orbits)))
     if verbose:
         print("=== COSMOS extension: time-varying metric for eccentric orbits ===")
-        print(f"rest-to-rest relative transfer, {orbits:.0f} orbit(s), N={N} waypoints")
+        print(f"rest-to-rest relative transfer, {orbits:.0f} orbit(s), N={N} waypoints, "
+              f"{dim}D ({'planar' if dim == 2 else 'with cross-track'})")
         print(f"ground truth: full nonlinear relative EOM about an eccentric orbit\n")
         print(f"{'e':>5} | {'CW-metric dv':>13} | {'TH-metric dv':>13} | "
               f"{'saving':>8} | {'CW-passive drift':>16}")
@@ -189,21 +203,19 @@ def main(out="cosmos_eccentric.png"):
     ax1.set_aspect("equal"); ax1.grid(alpha=0.3); ax1.legend(fontsize=8.5)
     ax1.set_title(f"Same transfer, two metrics (eccentric reference, e={e_show})")
 
-    ax2.plot(es, savings, "o-", color="#1d9e75", lw=2.4, label="Δv saving (TH vs CW metric)")
+    # 3D (cross-track) sweep to show the generality holds out-of-plane
+    rows3d = run(dim=3, verbose=False)
+    es3 = [r["e"] for r in rows3d]; sav3 = [r["saving"] for r in rows3d]
+
+    ax2.plot(es, savings, "o-", color="#1d9e75", lw=2.4,
+             label="Δv saving — 2D (planar)")
+    ax2.plot(es3, sav3, "^--", color="#2563EB", lw=2.0, alpha=0.9,
+             label="Δv saving — 3D (with cross-track)")
     ax2.set_xlabel("reference-orbit eccentricity  e")
-    ax2.set_ylabel("Δv saving  [%]", color="#1d9e75")
-    ax2.tick_params(axis="y", labelcolor="#1d9e75")
+    ax2.set_ylabel("Δv saving  [%]")
     ax2.grid(alpha=0.3)
-    ax2b = ax2.twinx()
-    ax2b.plot(es, drifts, "s--", color="#DC2626", lw=1.6, alpha=0.8,
-              label="CW-passive drift / orbit")
-    ax2b.set_ylabel("CW-passive drift  [% of amplitude]", color="#DC2626")
-    ax2b.set_yscale("symlog")
-    ax2b.tick_params(axis="y", labelcolor="#DC2626")
     ax2.set_title("When does the metric matter? (saving grows with eccentricity)")
-    l1, lab1 = ax2.get_legend_handles_labels()
-    l2, lab2 = ax2b.get_legend_handles_labels()
-    ax2.legend(l1 + l2, lab1 + lab2, fontsize=8.3, loc="upper left")
+    ax2.legend(fontsize=8.3, loc="upper left")
 
     fig.suptitle("COSMOS - time-varying metric for eccentric orbits "
                  "(Tschauner-Hempel): the generality claim, where it pays",
