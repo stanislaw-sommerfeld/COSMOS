@@ -133,7 +133,7 @@ def main(out="cosmos_swarm_safe.png"):
     fig.suptitle(f"COSMOS - E3: metric-aware inter-agent safety "
                  f"({r['dv_eu']/r['dv_ri']:.2f}× cheaper, same clearance, collision-free)",
                  fontsize=12, fontweight="bold")
-    fig.tight_layout(); fig.savefig(out, dpi=120)
+    fig.tight_layout(); fig.savefig(out, dpi=150)
     print(f"\nFigure -> {out}")
 
 

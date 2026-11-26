@@ -87,7 +87,7 @@ def main():
              "preconditioner and solver are identical. That is the generality claim, in code.",
              ha="center", fontsize=8, color="#555")
     fig.tight_layout(rect=(0, 0.03, 1, 1))
-    fig.savefig("cosmos_generality.png", dpi=130)
+    fig.savefig("cosmos_generality.png", dpi=150)
     print("\nFigure -> cosmos_generality.png")
 
 

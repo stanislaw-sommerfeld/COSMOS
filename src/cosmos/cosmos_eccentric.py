@@ -209,7 +209,7 @@ def main(out="cosmos_eccentric.png"):
                  "(Tschauner-Hempel): the generality claim, where it pays",
                  fontsize=12, fontweight="bold")
     fig.tight_layout()
-    fig.savefig(out, dpi=130)
+    fig.savefig(out, dpi=150)
     print(f"\nFigure -> {out}")
 
 

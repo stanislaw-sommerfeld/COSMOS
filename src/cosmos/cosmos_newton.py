@@ -112,7 +112,7 @@ def main(out="cosmos_newton.png"):
     ax.set_title("Covariant descent in the fuel metric: α=1 is a one-step exact solve\n"
                  "(the preconditioner $M^{-1}=(B^\\top B)^{-1}$ is the exact Gauss-Newton Hessian inverse)",
                  fontsize=10.5, fontweight="bold")
-    fig.tight_layout(); fig.savefig(out, dpi=130)
+    fig.tight_layout(); fig.savefig(out, dpi=150)
     print(f"\nFigure -> {out}")
 
 

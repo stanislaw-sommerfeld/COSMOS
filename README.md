@@ -51,6 +51,7 @@ That single substitution — from $A^\top A$ (raw acceleration) to $B^\top B$ (t
 | Metric-aware **inter-agent** safety | collision-free at **~1.3× lower Δv** than the metric-blind push |
 | **Receding-horizon** (MPC) | terminal error cut **~10×** under process noise |
 | **Chance-constrained** keep-outs | realized safety calibrated to the target $\beta$ under navigation uncertainty |
+| **Benchmark** vs SCP/SQP (SLSQP) | within **<1%** of the constrained optimum, **15–18× faster** at $N\!=\!100\text{–}150$, and feasible where SLSQP is not |
 
 ## 💡 The core idea
 
@@ -263,6 +264,14 @@ python -m cosmos.cosmos_swarm_safe  # E3 · inter-agent metric safety
 python -m cosmos.cosmos_mpc         # E4 · receding-horizon replanning
 python -m cosmos.cosmos_chance      # E5 · chance-constrained keep-outs
 ```
+
+**9 · Benchmark against serious baselines (why it is non-trivial *and* fast).** The base problem is linear-quadratic, so a fair critic asks why a planner is needed when the LQ optimum is closed-form (E2). Answer: the LQ form cannot represent a keep-out. Compared on the *same* hard (non-convex keep-out) problem against the analytic LQ optimum (infeasible — no obstacle notion) and a general-purpose SQP solver (scipy SLSQP minimizing the exact control energy subject to the hard keep-out), COSMOS matches the SCP optimum to **<1% Δv** where SLSQP converges, stays **strictly collision-free**, and is **15–18× faster** at $N=100\text{–}150$ — where SLSQP exhausts its iteration budget and returns an infeasible trajectory. SLSQP factorizes dense Jacobians that grow with the horizon; COSMOS's covariant step is a fixed structured solve.
+
+```bash
+python -m cosmos.cosmos_benchmark   # COSMOS vs SCP/SQP vs LQ (quality, feasibility, scaling)
+```
+
+<div align="center"><img src="figures/cosmos_benchmark.png" width="760"/></div>
 
 > **Code-quality note (v2).** The shared numerics — the controllability Gramian, the CW state system, the closed-form LQ optimum, the time-varying operators, and the Euclidean/Riemannian keep-out and inter-agent projections — now live once in [`cosmos/_core.py`](src/cosmos/_core.py) instead of being copy-pasted across modules. Modules A and B are importable (no side effects at import) and unit-tested. A faster, exact Van Loan Gramian is available via `controllability_gramian(..., method="vanloan")`. The regression suite grew from 8 to **15 tests**; every headline number is unchanged.
 

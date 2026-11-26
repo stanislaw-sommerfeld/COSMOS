@@ -244,7 +244,7 @@ def plot(trajs_fuel, trajs_free, starts, goals, obstacles, dim, K_X,
         ax.set_xlabel("along-track y"); ax.set_ylabel("radial x")
         ax.set_aspect("equal"); ax.grid(alpha=0.3); ax.legend(fontsize=9)
     ax.set_title(title, fontsize=11, fontweight="bold")
-    fig.tight_layout(); fig.savefig(path, dpi=120)
+    fig.tight_layout(); fig.savefig(path, dpi=150)
     return path
 
 

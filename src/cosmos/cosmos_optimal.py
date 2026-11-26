@@ -172,7 +172,7 @@ def main(out="cosmos_optimal.png"):
     fig.suptitle("COSMOS - Module A: fuel-aware CHOMP vs the analytical LQ optimum",
                  fontsize=13, fontweight="bold")
     fig.tight_layout()
-    fig.savefig(out, dpi=120)
+    fig.savefig(out, dpi=150)
     print(f"\nFigure -> {out}")
 
 

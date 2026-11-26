@@ -135,7 +135,7 @@ def main(out="cosmos_chance.png"):
     fig.suptitle("COSMOS - E5: chance-constrained keep-outs "
                  "(radius inflation + the Module B projection)",
                  fontsize=12, fontweight="bold")
-    fig.tight_layout(); fig.savefig(out, dpi=120)
+    fig.tight_layout(); fig.savefig(out, dpi=150)
     print(f"\nFigure -> {out}")
 
 

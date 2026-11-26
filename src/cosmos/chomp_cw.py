@@ -402,5 +402,5 @@ if __name__ == "__main__":
                      "(Clohessy-Wiltshire, with cross-track)", fontsize=13, fontweight="bold")
 
     fig.tight_layout()
-    fig.savefig(out, dpi=120)
+    fig.savefig(out, dpi=150)
     print(f"\nFigure -> {out}")

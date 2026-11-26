@@ -106,5 +106,5 @@ ax.set_title(f"COSMOS - multi-chaser debris rendezvous, LEO {ALT/1e3:.0f} km\n"
              f"free-space {dv_free:.2f} m/s   ({100*(dv_free-dv_fuel)/dv_free:.0f}% saved)",
              fontsize=11, fontweight="bold")
 fig.tight_layout()
-fig.savefig("cosmos_units.png", dpi=120)
+fig.savefig("cosmos_units.png", dpi=150)
 print("\nFigure -> cosmos_units.png")

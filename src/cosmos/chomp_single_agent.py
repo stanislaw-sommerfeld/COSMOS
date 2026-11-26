@@ -250,5 +250,5 @@ if __name__ == "__main__":
     fig.suptitle("COSMOS - Part I: CHOMP single agent (covariant gradient)",
                  fontsize=13, fontweight="bold")
     fig.tight_layout()
-    fig.savefig("chomp_part1_demo.png", dpi=130)
+    fig.savefig("chomp_part1_demo.png", dpi=150)
     print("\nFigure -> chomp_part1_demo.png")

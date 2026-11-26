@@ -256,7 +256,7 @@ if __name__ == "__main__":
     fig.suptitle("COSMOS - Part II: CHOMP multi-agent (antipodal swap, K=6)\n"
                  "circle = start, cross = goal", fontsize=12, fontweight="bold")
     fig.tight_layout()
-    fig.savefig("chomp_part2_swarm.png", dpi=120)
+    fig.savefig("chomp_part2_swarm.png", dpi=150)
     print("\nFigure -> chomp_part2_swarm.png")
 
     fig2, ax = plt.subplots(figsize=(7.4, 4.6))
@@ -271,5 +271,5 @@ if __name__ == "__main__":
     ax.set_title("Convergence: Jacobi vs Gauss-Seidel\n"
                  "thin = raw cost (transient re-routing spikes) · thick = best-so-far")
     fig2.tight_layout()
-    fig2.savefig("chomp_part2_convergence.png", dpi=120)
+    fig2.savefig("chomp_part2_convergence.png", dpi=150)
     print("Figure -> chomp_part2_convergence.png")
