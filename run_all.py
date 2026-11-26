@@ -62,6 +62,16 @@ CORE = [
      ["-m", "cosmos.cosmos_full", "--3d"]),
     ("Generality · B = D₂ − G across free / CW / J2 (two coefficients)",
      ["-m", "cosmos.cosmos_generality"]),
+    ("Extension · time-varying metric for eccentric orbits (Tschauner–Hempel)",
+     ["-m", "cosmos.cosmos_eccentric"]),
+    ("Extension · the preconditioner is the exact Gauss–Newton step",
+     ["-m", "cosmos.cosmos_newton"]),
+    ("Extension · metric-aware inter-agent safety (coupled Riemannian) [E3]",
+     ["-m", "cosmos.cosmos_swarm_safe"]),
+    ("Extension · receding-horizon MPC replanning under disturbance [E4]",
+     ["-m", "cosmos.cosmos_mpc"]),
+    ("Extension · chance-constrained keep-outs under nav. uncertainty [E5]",
+     ["-m", "cosmos.cosmos_chance"]),
     ("Motivation · CW-passive orbit vs realistic J2 (Schweighart–Sedwick)",
      ["-m", "cosmos.cw_vs_j2_demo"]),
     ("Swarm · price of decoupling (joint vs Gauss–Seidel)",
@@ -73,13 +83,13 @@ CORE = [
 ]
 
 SLOW = [
-    ("Validation · multi-seed robustness (53% ± …, 100% safe)",
+    ("Validation · multi-seed robustness (40% ± 10%, 100% safe)",
      ["-m", "cosmos.cosmos_validation"]),
     ("Validation · sweep with 95% confidence intervals",
      ["-m", "cosmos.cosmos_sweep"]),
 ]
 
-SMOKE = CORE[:1] + CORE[9:12]   # one mission + the three new analyses
+SMOKE = CORE[:1] + CORE[9:12]   # one mission + the generality/extension analyses
 
 
 def main():

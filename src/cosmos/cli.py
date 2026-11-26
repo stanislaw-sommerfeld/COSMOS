@@ -41,20 +41,9 @@ from scipy.optimize import linear_sum_assignment
 from .chomp_cw import (cw_operators, cw_offset, to_flat, to_traj,
                       cw_control, delta_v, obstacle_gradient)
 from .chomp_swarm import repulsion_grad
-
-
-def gramian(A, B, T, nq=4000):
-    """Controllability Gramian W = int_0^T Phi(t) B B^T Phi(t)^T dt
-       (same as cosmos_safe.py; inlined to avoid importing that script's body)."""
-    dq = T / nq
-    Phi = np.eye(A.shape[0])
-    step = expm(A * dq)
-    BBt = B @ B.T
-    W = np.zeros_like(A, dtype=float)
-    for _ in range(nq):
-        W += Phi @ BBt @ Phi.T * dq
-        Phi = step @ Phi
-    return W
+from ._core import (controllability_gramian as gramian, cw_state_matrices,
+                    project_euclid as project_euclid_nd,
+                    project_metric as project_metric_nd)
 
 
 # ============================================================================
@@ -69,44 +58,9 @@ def si_constants():
 
 
 # ============================================================================
-# 2. dim-general safety projection (generalizes cosmos_safe's 2D version)
+# 2. dim-general safety projection (project_euclid_nd / project_metric_nd are
+#    imported from _core; apply_safety dispatches between them)
 # ============================================================================
-def _normal(x, c):
-    v = x - c
-    d = np.linalg.norm(v) + 1e-9
-    return v / d, d
-
-
-def project_euclid_nd(traj, obstacles, margin=0.05):
-    for i in range(len(traj)):
-        for ob in obstacles:
-            ni, d = _normal(traj[i], ob["c"])
-            if d - ob["r"] < margin:
-                traj[i] = ob["c"] + ni * (ob["r"] + margin)
-    return traj
-
-
-def project_metric_nd(traj, obstacles, Minv, margin=0.05, sweeps=3):
-    """Riemannian projection in M = B^T B (dim-general). For each violated
-       waypoint i: dxi = Minv a (margin - clr) / (a^T Minv a)."""
-    n, D = traj.shape
-    xi = to_flat(traj)
-    for _ in range(sweeps):
-        Tj = to_traj(xi, n)
-        for i in range(n):
-            for ob in obstacles:
-                ni, d = _normal(Tj[i], ob["c"])
-                clr = d - ob["r"]
-                if clr < margin:
-                    a = np.zeros(D * n)
-                    for dd in range(D):
-                        a[dd * n + i] = ni[dd]
-                    Ma = Minv @ a
-                    xi = xi + Ma * ((margin - clr) / (a @ Ma))
-                    Tj = to_traj(xi, n)
-    return to_traj(xi, n)
-
-
 def apply_safety(traj, obstacles, Minv, mode):
     if not obstacles or mode == "none":
         return traj
@@ -117,23 +71,8 @@ def apply_safety(traj, obstacles, Minv, mode):
 
 # ============================================================================
 # 3. Hungarian assignment with the closed-form LQ cost (Module A in the mission)
+#    (cw_state_matrices is imported from _core)
 # ============================================================================
-def cw_state_matrices(nm, dim):
-    """Continuous CW state-space (A, B) for the LQ cost. 3D adds the decoupled
-       cross-track oscillator z'' + n^2 z = u_z."""
-    if dim == 2:
-        A = np.array([[0, 0, 1, 0], [0, 0, 0, 1],
-                      [3 * nm ** 2, 0, 0, 2 * nm], [0, 0, -2 * nm, 0]], float)
-        B = np.array([[0, 0], [0, 0], [1, 0], [0, 1]], float)
-    else:
-        A = np.zeros((6, 6)); B = np.zeros((6, 3))
-        A[0, 3] = A[1, 4] = A[2, 5] = 1.0
-        A[3, 0] = 3 * nm ** 2; A[3, 4] = 2 * nm; A[4, 3] = -2 * nm
-        A[5, 2] = -nm ** 2
-        B[3, 0] = B[4, 1] = B[5, 2] = 1.0
-    return A, B
-
-
 def lq_cost_matrix(starts, goals, nm, T, dim):
     """C[i,j] = analytical LQ optimal energy to take agent i (at rest) to slot j
        (at rest), via the controllability Gramian. Closed form, cheap."""

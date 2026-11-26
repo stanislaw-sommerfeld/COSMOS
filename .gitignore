@@ -1,1 +1,14 @@
 /docs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# figures generated into the repo root by `python -m cosmos.<module>`
+# (the curated copies live in figures/)
+/*.png
+/*.gif

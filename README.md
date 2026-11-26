@@ -42,6 +42,16 @@ That single substitution — from $A^\top A$ (raw acceleration) to $B^\top B$ (t
 | Collision-free success rate | **100%** (hardened mode) |
 | Realistic LEO (500 km) per-satellite cost | **~1–2 m/s**, arriving at cm/s |
 
+**Extensions (v2)** — the same construction, pushed further:
+
+| Extension | Result |
+|---|---|
+| Time-varying metric for **eccentric** orbits (TH) | **~16%** Δv saved at $e=0.3$ (0% at $e=0$, validating CW for circular LEO) |
+| Exact **Gauss–Newton** optimality | the 1.00× optimum is reached in a **single** covariant step from any start |
+| Metric-aware **inter-agent** safety | collision-free at **~1.3× lower Δv** than the metric-blind push |
+| **Receding-horizon** (MPC) | terminal error cut **~10×** under process noise |
+| **Chance-constrained** keep-outs | realized safety calibrated to the target $\beta$ under navigation uncertainty |
+
 ## 💡 The core idea
 
 CHOMP minimizes a functional combining smoothness and obstacle cost, and descends it with a **covariant** (metric-preconditioned) gradient:
@@ -124,6 +134,8 @@ python -m cosmos.cosmos_validation # robustness (slowest; a few minutes)
 python -m cosmos.cosmos_units      # credible m/s numbers
 python -m cosmos.cosmos_optimal    # 1.00× LQ optimum + the 15× pitfall   (Module A)
 python -m cosmos.cosmos_safe       # 15× → 1.69× safety fix                (Module B)
+python -m cosmos.cosmos_eccentric  # time-varying metric, eccentric orbits (extension)
+python -m cosmos.cosmos_newton     # exact Gauss–Newton preconditioner     (extension)
 python -m cosmos.pygame_orbital_sim   # real-time viewer (needs ".[viz]" + a display)
 ```
 
@@ -157,6 +169,12 @@ The science is built up in layers, each a self-contained module inside the `cosm
 | 7 | `cosmos_units` | Realistic LEO SI units (m/s) |
 | 8 | `cosmos_optimal` | **Module A:** analytical LQ optimum (1.00×) |
 | 9 | `cosmos_safe` | **Module B:** Riemannian safe projection (15× → 1.69×) |
+| 10 | `cosmos_eccentric` | **Extension E1:** time-varying metric for eccentric orbits (TH) |
+| 11 | `cosmos_newton` | **Extension E2:** the preconditioner is the exact Gauss–Newton step |
+| 12 | `cosmos_swarm_safe` | **Extension E3:** metric-aware inter-agent safety (coupled Riemannian) |
+| 13 | `cosmos_mpc` | **Extension E4:** receding-horizon replanning under disturbance |
+| 14 | `cosmos_chance` | **Extension E5:** chance-constrained keep-outs (nav. uncertainty) |
+| — | `_core` | Shared numerics: Gramian, LQ optimum, projections, time-varying ops, chance |
 | — | `cli` | **Unified driver** composing the above into the mission |
 
 ## 📂 Repository structure
@@ -177,13 +195,20 @@ cosmos/
 ├── figures/               ← curated result figures + animation
 └── src/
     └── cosmos/            ← the importable package
-        ├── __init__.py
+        ├── __init__.py             curated public API (re-exports the core)
+        ├── _core.py                shared numerics: Gramian, LQ optimum, projections,
+        │                             CW state system, time-varying operators
         ├── cli.py                  unified mission driver
         ├── chomp_single_agent.py   covariant CHOMP core
         ├── chomp_swarm.py          multi-agent decoupling
         ├── chomp_cw.py             fuel-aware CW metric  +  B = D₂ − G generality
         ├── cosmos_full.py          full system (2D / --3d)
         ├── cosmos_generality.py    one solver, any linear dynamics (free / CW / J2)
+        ├── cosmos_eccentric.py     E1 — time-varying metric, eccentric orbits
+        ├── cosmos_newton.py        E2 — exact Gauss–Newton preconditioner
+        ├── cosmos_swarm_safe.py    E3 — metric-aware inter-agent safety
+        ├── cosmos_mpc.py           E4 — receding-horizon replanning (MPC)
+        ├── cosmos_chance.py        E5 — chance-constrained keep-outs
         ├── cw_vs_j2_demo.py        motivation: a CW-passive orbit is not J2-passive
         ├── cosmos_joint.py         swarm: price-of-decoupling analysis
         ├── cosmos_validation.py    multi-seed validation
@@ -208,6 +233,38 @@ cosmos/
 **3 · Metric-aware safety (Module B).** That 15× pitfall is fixed by projecting onto safety constraints *in the fuel metric* $B^\top B$ rather than in Euclidean space — a closed-form Riemannian projection that cuts the safety premium to **1.69×** while staying strictly collision-free.
 
 <div align="center"><img src="figures/cosmos_safe.png" width="620"/></div>
+
+## 🧪 Extensions (v2)
+
+Two additions that answer the two hardest questions about the method.
+
+**4 · A time-varying metric for eccentric orbits (Tschauner–Hempel).** Clohessy–Wiltshire assumes a *circular* reference orbit. Around an **eccentric** orbit the linearized relative dynamics are time-varying, and a CW-"passive" relative orbit drifts by many times its own amplitude per revolution. COSMOS's construction generalizes with a single change — the dynamics block becomes $G(t)$, so $B = D_2 - G(t)$ — and nothing else moves. Planning in the correct time-varying metric and scoring against the **full nonlinear** relative equations of motion, the Δv saving climbs from ~0% at $e=0$ (CW is validated for circular LEO) to **~16% at $e=0.3$**. The metric matters exactly when the dynamics do.
+
+```bash
+python -m cosmos.cosmos_eccentric   # saving-vs-eccentricity curve
+```
+
+<div align="center"><img src="figures/cosmos_eccentric.png" width="720"/></div>
+
+**5 · The preconditioner is the exact Gauss–Newton step.** The fuel cost is exactly quadratic, so its Hessian is $M = B^\top B$ — precisely the covariant preconditioner. One unit covariant step is therefore a full Newton step: from *any* start it reaches the closed-form optimum to machine precision in a **single iteration**. The "1.00× optimal" headline is a property of the method (the metric *is* the exact inverse Hessian), not of the step size or iteration budget.
+
+```bash
+python -m cosmos.cosmos_newton      # single-step convergence
+```
+
+**6 · Metric-aware inter-agent safety (E3).** Module B made *static* keep-out avoidance fuel-cheap; a swarm's real hazard is the *other agents*. E3 extends the closed-form Riemannian projection to the **coupled** pairwise constraint $\lVert x_i(t)-x_j(t)\rVert \ge r_{\text{col}}$: the correction is shared between the two agents, each moving the way that is cheapest in its own fuel metric. The swarm stays strictly collision-free at **~1.3× lower Δv** than the metric-blind push — the swarm analogue of Module B.
+
+**7 · Receding-horizon replanning / MPC (E4).** Every other result is open-loop. Wrapping the fuel-aware solver in an MPC loop (execute one step, re-plan from the measured state), closed-loop control cuts the terminal error **~10×** under process noise for a modest Δv premium. Each re-plan is essentially one Gauss–Newton step (contribution 5), so the metric is MPC-ready.
+
+**8 · Chance-constrained keep-outs (E5).** The keep-out radius is treated as exact. Under Gaussian navigation uncertainty $\sigma$, inflating the radius by $\Phi^{-1}(\beta)\,\sigma$ turns it into a chance constraint — "stay outside with probability $\ge \beta$" — enforced by the **same** Module B projection with zero new machinery. Monte Carlo confirms the realized safety tracks the target $\beta$ and Δv grows smoothly with it: a tunable safety/fuel trade.
+
+```bash
+python -m cosmos.cosmos_swarm_safe  # E3 · inter-agent metric safety
+python -m cosmos.cosmos_mpc         # E4 · receding-horizon replanning
+python -m cosmos.cosmos_chance      # E5 · chance-constrained keep-outs
+```
+
+> **Code-quality note (v2).** The shared numerics — the controllability Gramian, the CW state system, the closed-form LQ optimum, the time-varying operators, and the Euclidean/Riemannian keep-out and inter-agent projections — now live once in [`cosmos/_core.py`](src/cosmos/_core.py) instead of being copy-pasted across modules. Modules A and B are importable (no side effects at import) and unit-tested. A faster, exact Van Loan Gramian is available via `controllability_gramian(..., method="vanloan")`. The regression suite grew from 8 to **15 tests**; every headline number is unchanged.
 
 ## 🖼️ Gallery
 

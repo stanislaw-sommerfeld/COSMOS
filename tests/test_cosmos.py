@@ -177,5 +177,106 @@ def test_cw_is_special_case_of_general_dynamics():
     assert abs(kxx2 - kxx) < 0.1 and abs(kc2 - kc) < 0.1   # but close (small J2)
 
 
+# ---------------------------------------------------------------------------
+# T9 - time-varying (Tschauner-Hempel) metric reduces to CW at e=0
+# ---------------------------------------------------------------------------
+def test_time_varying_metric_reduces_to_cw_at_zero_eccentricity():
+    from cosmos._core import (time_varying_operators, time_varying_offset,
+                              tschauner_hempel_coeffs)
+    N, T, nm = 60, np.pi, 1.0
+    dt = T / (N + 1)
+    start, goal = np.array([3.0, 5.0]), np.array([0.0, 0.0])
+    coeff = lambda t: tschauner_hempel_coeffs(t, e=0.0, nm=nm)
+    B_tv, _, bl = time_varying_operators(N, dt, coeff, w_bc=0.0)
+    B_cw, _, blcw = cw_operators(N, dt, nm, w_bc=0.0, dim=2)
+    # the time-varying construction is a strict superset: e=0 -> CW, bit-for-bit
+    assert np.allclose(B_tv, B_cw, atol=1e-12)
+    from cosmos.chomp_cw import cw_offset
+    assert np.allclose(time_varying_offset(bl, start, goal),
+                       cw_offset(blcw, start, goal), atol=1e-12)
+
+
+# ---------------------------------------------------------------------------
+# T10 - on an eccentric orbit, the TH metric genuinely beats the CW metric
+# ---------------------------------------------------------------------------
+def test_eccentric_metric_beats_cw_metric():
+    from cosmos import cosmos_eccentric as ecc
+    rows = ecc.run(eccentricities=(0.0, 0.3), N=70, verbose=False)
+    by_e = {r["e"]: r for r in rows}
+    # circular (e=0): the CW metric is exactly right -> saving ~ 0
+    assert abs(by_e[0.0]["saving"]) < 0.5, f"e=0 saving {by_e[0.0]['saving']:.2f}% (should be ~0)"
+    # eccentric (e=0.3): the time-varying metric saves a real, large fraction
+    assert by_e[0.3]["saving"] > 5.0, f"e=0.3 saving {by_e[0.3]['saving']:.2f}% (should be large)"
+
+
+# ---------------------------------------------------------------------------
+# T11 - the covariant preconditioner is the exact Gauss-Newton step
+# ---------------------------------------------------------------------------
+def test_preconditioner_is_exact_gauss_newton():
+    from cosmos import cosmos_newton as nwt
+    N, T, nm = 60, np.pi, 1.0
+    dt = T / (N + 1)
+    start, goal = np.array([3.0, 5.0]), np.array([0.0, 0.0])
+    # a single unit covariant step must reach the closed-form optimum to ~machine eps
+    err = nwt.one_step_error(start, goal, nm, N, dt)
+    assert err < 1e-6, f"one Newton step off the optimum by {err:.2e}"
+
+
+# ---------------------------------------------------------------------------
+# T12 - the Van Loan Gramian agrees with the legacy quadrature Gramian
+# ---------------------------------------------------------------------------
+def test_vanloan_gramian_matches_quadrature():
+    from cosmos._core import cw_state_matrices, controllability_gramian
+    A, B = cw_state_matrices(1.0, dim=2)
+    Wq = controllability_gramian(A, B, np.pi, method="quadrature")
+    Wv = controllability_gramian(A, B, np.pi, method="vanloan")
+    rel = np.linalg.norm(Wq - Wv) / np.linalg.norm(Wv)
+    assert rel < 1e-3, f"Van Loan vs quadrature Gramian differ by {rel:.2e}"
+    # Van Loan is symmetric by construction
+    assert np.allclose(Wv, Wv.T, atol=1e-10)
+
+
+# ---------------------------------------------------------------------------
+# T13 - E3: metric-aware inter-agent safety is collision-free and >= as cheap
+# ---------------------------------------------------------------------------
+def test_inter_agent_metric_safety_is_cheaper_and_safe():
+    from cosmos import cosmos_swarm_safe as e3
+    r = e3.run(verbose=False)
+    # both methods achieve the required clearance (>= r_col, within the margin)
+    assert r["d_ri"] >= r["r_col"] - 1e-6, f"Riemannian clearance {r['d_ri']:.3f}"
+    assert r["d_eu"] >= r["r_col"] - 1e-6, f"Euclidean clearance {r['d_eu']:.3f}"
+    # metric-aware separation costs no more Delta-v than the metric-blind push
+    assert r["dv_ri"] <= r["dv_eu"] + 1e-6, \
+        f"Riemannian dv {r['dv_ri']:.2f} should be <= Euclidean {r['dv_eu']:.2f}"
+
+
+# ---------------------------------------------------------------------------
+# T14 - E4: receding-horizon replanning cuts the terminal error vs open-loop
+# ---------------------------------------------------------------------------
+def test_mpc_beats_open_loop_under_disturbance():
+    from cosmos import cosmos_mpc as e4
+    summary, _, _ = e4.run(sigma=0.03, trials=6, verbose=False)
+    assert summary["mpc"]["err"] < summary["open"]["err"], \
+        f"MPC err {summary['mpc']['err']:.3f} should beat open-loop {summary['open']['err']:.3f}"
+
+
+# ---------------------------------------------------------------------------
+# T15 - E5: the chance-constraint radius inflation calibrates the safety level
+# ---------------------------------------------------------------------------
+def test_chance_constraint_is_calibrated_and_monotone():
+    from cosmos._core import chance_margin
+    # k_beta is increasing in beta and zero at 0.5 (median)
+    assert abs(chance_margin(1.0, 0.5)) < 1e-6
+    assert chance_margin(1.0, 0.99) > chance_margin(1.0, 0.90) > chance_margin(1.0, 0.80) > 0
+    from cosmos import cosmos_chance as e5
+    rows, _ = e5.run(betas=(0.5, 0.9, 0.99), samples=2000, verbose=False)
+    by = {r["beta"]: r for r in rows}
+    # higher target beta -> higher realized safe fraction and higher Delta-v
+    assert (1 - by[0.99]["rate"]) > (1 - by[0.9]["rate"]) > (1 - by[0.5]["rate"])
+    assert by[0.99]["dv"] > by[0.5]["dv"]
+    # calibrated: the high-safety level is at least roughly met (conservative is ok)
+    assert (1 - by[0.99]["rate"]) >= 0.95
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
