@@ -26,6 +26,8 @@ import matplotlib.pyplot as plt
 
 from .chomp_cw import cw_operators, cw_offset, to_flat, to_traj, cw_control
 from .chomp_swarm import repulsion_grad
+from ._core import (project_euclid as project_keepout,
+                    project_metric as project_keepout_metric)
 
 
 # ============================================================================
@@ -49,42 +51,10 @@ def step_agent_cw(traj, start, goal, B, Minv, c0, dt,
     return to_traj(xi, n)
 
 
-def project_keepout(traj, obstacles, margin=0.05):
-    """Hard safety (metric-BLIND, Euclidean): push any waypoint inside a keep-out
-       straight out to its boundary. Kept for comparison / ablation."""
-    for i in range(len(traj)):
-        for o in obstacles:
-            v = traj[i] - o["c"]
-            dist = np.linalg.norm(v)
-            if dist - o["r"] < margin:
-                traj[i] = o["c"] + v / (dist + 1e-9) * (o["r"] + margin)
-    return traj
-
-
-def project_keepout_metric(traj, obstacles, Minv, margin=0.05, sweeps=3):
-    """Metric-AWARE (Riemannian) keep-out projection in M = B^T B, dim-general.
-       Same closed form as Module B (cosmos_safe.project_metric), generalized to
-       2D/3D. This is what the mission driver (cli.py) uses; cosmos_full now matches
-       it so the 'full system' demo does not silently fall back to the 15x-blind
-       projection that Module A/B identified and fixed."""
-    n, D = traj.shape
-    xi = to_flat(traj)
-    for _ in range(sweeps):
-        Tj = to_traj(xi, n)
-        for i in range(n):
-            for o in obstacles:
-                v = Tj[i] - o["c"]
-                dist = np.linalg.norm(v) + 1e-9
-                clr = dist - o["r"]
-                if clr < margin:
-                    ni = v / dist
-                    a = np.zeros(D * n)
-                    for dd in range(D):
-                        a[dd * n + i] = ni[dd]
-                    Ma = Minv @ a
-                    xi = xi + Ma * ((margin - clr) / (a @ Ma))
-                    Tj = to_traj(xi, n)
-    return to_traj(xi, n)
+# project_keepout (Euclidean) and project_keepout_metric (Riemannian, B^T B)
+# are imported from _core -- a single, dim-general implementation shared with
+# the mission driver (cli) and Module B (cosmos_safe), so the "full system" demo
+# uses exactly the metric-aware projection Module B validates.
 
 
 def project_inter_agent(trajs, r_col):
