@@ -159,9 +159,12 @@ The science is built up in layers, each a self-contained module inside the `cosm
 | 7 | `cosmos_units` | Realistic LEO SI units (m/s) |
 | 8 | `cosmos_optimal` | **Module A:** analytical LQ optimum (1.00×) |
 | 9 | `cosmos_safe` | **Module B:** Riemannian safe projection (15× → 1.69×) |
-| 10 | `cosmos_eccentric` | **Extension:** time-varying metric for eccentric orbits (TH) |
-| 11 | `cosmos_newton` | **Extension:** the preconditioner is the exact Gauss–Newton step |
-| — | `_core` | Shared numerics: Gramian, LQ optimum, projections, time-varying operators |
+| 10 | `cosmos_eccentric` | **Extension E1:** time-varying metric for eccentric orbits (TH) |
+| 11 | `cosmos_newton` | **Extension E2:** the preconditioner is the exact Gauss–Newton step |
+| 12 | `cosmos_swarm_safe` | **Extension E3:** metric-aware inter-agent safety (coupled Riemannian) |
+| 13 | `cosmos_mpc` | **Extension E4:** receding-horizon replanning under disturbance |
+| 14 | `cosmos_chance` | **Extension E5:** chance-constrained keep-outs (nav. uncertainty) |
+| — | `_core` | Shared numerics: Gramian, LQ optimum, projections, time-varying ops, chance |
 | — | `cli` | **Unified driver** composing the above into the mission |
 
 ## 📂 Repository structure
@@ -191,8 +194,11 @@ cosmos/
         ├── chomp_cw.py             fuel-aware CW metric  +  B = D₂ − G generality
         ├── cosmos_full.py          full system (2D / --3d)
         ├── cosmos_generality.py    one solver, any linear dynamics (free / CW / J2)
-        ├── cosmos_eccentric.py     extension — time-varying metric, eccentric orbits
-        ├── cosmos_newton.py        extension — exact Gauss–Newton preconditioner
+        ├── cosmos_eccentric.py     E1 — time-varying metric, eccentric orbits
+        ├── cosmos_newton.py        E2 — exact Gauss–Newton preconditioner
+        ├── cosmos_swarm_safe.py    E3 — metric-aware inter-agent safety
+        ├── cosmos_mpc.py           E4 — receding-horizon replanning (MPC)
+        ├── cosmos_chance.py        E5 — chance-constrained keep-outs
         ├── cw_vs_j2_demo.py        motivation: a CW-passive orbit is not J2-passive
         ├── cosmos_joint.py         swarm: price-of-decoupling analysis
         ├── cosmos_validation.py    multi-seed validation
@@ -236,7 +242,19 @@ python -m cosmos.cosmos_eccentric   # saving-vs-eccentricity curve
 python -m cosmos.cosmos_newton      # single-step convergence
 ```
 
-> **Code-quality note (v2).** The shared numerics — the controllability Gramian, the CW state system, the closed-form LQ optimum, and the Euclidean/Riemannian keep-out projections — now live once in [`cosmos/_core.py`](src/cosmos/_core.py) instead of being copy-pasted across modules. Modules A and B are importable (no side effects at import) and unit-tested. A faster, exact Van Loan Gramian is available via `controllability_gramian(..., method="vanloan")`. The regression suite grew from 8 to **12 tests**; every headline number is unchanged.
+**6 · Metric-aware inter-agent safety (E3).** Module B made *static* keep-out avoidance fuel-cheap; a swarm's real hazard is the *other agents*. E3 extends the closed-form Riemannian projection to the **coupled** pairwise constraint $\lVert x_i(t)-x_j(t)\rVert \ge r_{\text{col}}$: the correction is shared between the two agents, each moving the way that is cheapest in its own fuel metric. The swarm stays strictly collision-free at **~1.3× lower Δv** than the metric-blind push — the swarm analogue of Module B.
+
+**7 · Receding-horizon replanning / MPC (E4).** Every other result is open-loop. Wrapping the fuel-aware solver in an MPC loop (execute one step, re-plan from the measured state), closed-loop control cuts the terminal error **~10×** under process noise for a modest Δv premium. Each re-plan is essentially one Gauss–Newton step (contribution 5), so the metric is MPC-ready.
+
+**8 · Chance-constrained keep-outs (E5).** The keep-out radius is treated as exact. Under Gaussian navigation uncertainty $\sigma$, inflating the radius by $\Phi^{-1}(\beta)\,\sigma$ turns it into a chance constraint — "stay outside with probability $\ge \beta$" — enforced by the **same** Module B projection with zero new machinery. Monte Carlo confirms the realized safety tracks the target $\beta$ and Δv grows smoothly with it: a tunable safety/fuel trade.
+
+```bash
+python -m cosmos.cosmos_swarm_safe  # E3 · inter-agent metric safety
+python -m cosmos.cosmos_mpc         # E4 · receding-horizon replanning
+python -m cosmos.cosmos_chance      # E5 · chance-constrained keep-outs
+```
+
+> **Code-quality note (v2).** The shared numerics — the controllability Gramian, the CW state system, the closed-form LQ optimum, the time-varying operators, and the Euclidean/Riemannian keep-out and inter-agent projections — now live once in [`cosmos/_core.py`](src/cosmos/_core.py) instead of being copy-pasted across modules. Modules A and B are importable (no side effects at import) and unit-tested. A faster, exact Van Loan Gramian is available via `controllability_gramian(..., method="vanloan")`. The regression suite grew from 8 to **15 tests**; every headline number is unchanged.
 
 ## 🖼️ Gallery
 

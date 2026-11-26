@@ -298,7 +298,7 @@
       <div class="stat" style="--c:var(--peri)"><div class="num" data-to="100" data-suffix="%">0%</div><div class="unit">safe</div><div class="lab">collision-free success rate (hardened mode)</div></div>
       <div class="stat" style="--c:var(--cyan)"><div class="num" data-to="1.69" data-dec="2" data-suffix="×">0×</div><div class="unit">safety premium</div><div class="lab">keep-out cost cut from 15× (metric-aware projection)</div></div>
       <div class="stat" style="--c:var(--mint)"><div class="num" data-to="16" data-suffix="%">0%</div><div class="unit">eccentric</div><div class="lab">Δv saved by the time-varying metric at e = 0.3 <span class="newtag">v2</span></div></div>
-      <div class="stat" style="--c:var(--peri)"><div class="num" data-to="12" data-suffix="">0</div><div class="unit">tests</div><div class="lab">regression tests lock every headline claim</div></div>
+      <div class="stat" style="--c:var(--peri)"><div class="num" data-to="15" data-suffix="">0</div><div class="unit">tests</div><div class="lab">regression tests lock every headline claim</div></div>
     </div>
     <div class="figframe reveal" style="margin-top:22px;max-width:780px">
       <img src="figures/cosmos_validation.png" alt="Multi-seed validation: savings and collision-free margins"/>
@@ -354,6 +354,24 @@
         <div class="figframe"><img src="figures/cosmos_newton.png" alt="single-step convergence of the covariant descent"/></div>
       </div>
     </div>
+
+    <div class="three" style="margin-top:22px">
+      <div class="card contrib reveal" style="--c:var(--cyan)">
+        <div class="n">E3</div><h3>Metric-aware inter-agent safety</h3>
+        <p>Module B avoided <i>static</i> keep-outs cheaply; a swarm's hazard is the <i>other agents</i>. A <b>coupled</b> Riemannian projection enforces \(\lVert x_i(t)-x_j(t)\rVert \ge r\) in the joint fuel metric — strictly collision-free at <b>~1.3× lower Δv</b> than the metric-blind push.</p>
+        <div class="figframe"><img src="figures/cosmos_swarm_safe.png" alt="metric-aware inter-agent separation"/></div>
+      </div>
+      <div class="card contrib reveal" style="--c:var(--mint)">
+        <div class="n">E4</div><h3>MPC-ready (receding horizon)</h3>
+        <p>Every other result is open-loop. Wrapped in a re-planning loop, closed-loop control cuts the terminal error <b>~10×</b> under process noise for a modest Δv premium — each re-plan is one Gauss–Newton step, so the metric is MPC-ready.</p>
+        <div class="figframe"><img src="figures/cosmos_mpc.png" alt="open-loop vs MPC under disturbance"/></div>
+      </div>
+      <div class="card contrib reveal" style="--c:var(--peri)">
+        <div class="n">E5</div><h3>Chance-constrained keep-outs</h3>
+        <p>Under navigation uncertainty \(\sigma\), inflate the radius by \(\Phi^{-1}(\beta)\sigma\) to guarantee &ldquo;stay outside with probability \(\ge\beta\)&rdquo; — enforced by the <b>same</b> Module B projection. Monte Carlo shows the realized safety tracks the target.</p>
+        <div class="figframe"><img src="figures/cosmos_chance.png" alt="chance-constrained keep-out calibration"/></div>
+      </div>
+    </div>
   </section>
 
   <!-- ARCHITECTURE -->
@@ -386,9 +404,11 @@
         ├── cosmos_full.py    full system (--3d)
         ├── cosmos_optimal.py <b>Module A</b>
         ├── cosmos_safe.py    <b>Module B</b>
-        ├── <b>cosmos_eccentric.py</b> <span>ext · time-varying</span>
-        ├── <b>cosmos_newton.py</b>    <span>ext · Gauss–Newton</span>
-        ├── cosmos_validation.py
+        ├── <b>cosmos_eccentric.py</b> <span>E1 · time-varying</span>
+        ├── <b>cosmos_newton.py</b>    <span>E2 · Gauss–Newton</span>
+        ├── <b>cosmos_swarm_safe.py</b> <span>E3 · swarm safety</span>
+        ├── <b>cosmos_mpc.py</b>       <span>E4 · MPC</span>
+        ├── <b>cosmos_chance.py</b>    <span>E5 · chance-constr.</span>
         └── cosmos_units.py</div>
     </div>
   </section>
