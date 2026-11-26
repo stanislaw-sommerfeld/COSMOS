@@ -190,7 +190,7 @@ def main():
     fig.suptitle("COSMOS — price of decoupling: Gauss-Seidel matches the joint optimum "
                  f"to {gap:+.2f}% (K={len(starts)})", fontsize=12, fontweight="bold")
     fig.tight_layout()
-    fig.savefig("cosmos_swarm_gap.png", dpi=120)
+    fig.savefig("cosmos_swarm_gap.png", dpi=150)
     print("\nFigure -> cosmos_swarm_gap.png")
 
 

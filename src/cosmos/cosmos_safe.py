@@ -123,7 +123,7 @@ def main(out="cosmos_safe.png"):
     ax2.set_title("Safety premium: 15x -> near-optimal")
     fig.suptitle("COSMOS - Module B: metric-aware safe optimization "
                  "(Riemannian projection in B^T B)", fontsize=13, fontweight="bold")
-    fig.tight_layout(); fig.savefig(out, dpi=120)
+    fig.tight_layout(); fig.savefig(out, dpi=150)
     print(f"\nFigure -> {out}")
 
 

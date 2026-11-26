@@ -166,7 +166,7 @@ def main(out="cosmos_mpc.png"):
     fig.suptitle("COSMOS - E4: the fuel-aware metric is MPC-ready "
                  "(receding-horizon replanning under noise)",
                  fontsize=12, fontweight="bold")
-    fig.tight_layout(); fig.savefig(out, dpi=120)
+    fig.tight_layout(); fig.savefig(out, dpi=150)
     print(f"\nFigure -> {out}")
 
 

@@ -200,6 +200,51 @@
   }
   @media(max-width:560px){.xform{grid-template-columns:1fr}.xarrow span{transform:rotate(90deg)}.gal{grid-template-columns:1fr 1fr}}
 
+  /* ---------- clickable cards + "details" affordance ---------- */
+  .contrib,.ext .card{cursor:pointer}
+  .detail-link{margin-top:14px;font-family:var(--mono);font-size:12px;font-weight:600;
+     color:var(--c,var(--cyan));display:inline-flex;align-items:center;gap:6px;
+     opacity:.85;transition:gap .2s,opacity .2s}
+  .contrib:hover .detail-link,.ext .card:hover .detail-link{gap:11px;opacity:1}
+  .ext .card .detail-link{color:var(--mint)}
+
+  /* ---------- lightbox (figure zoom) ---------- */
+  .figframe img{cursor:zoom-in}
+  .lightbox{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;
+     background:rgba(3,6,18,.92);backdrop-filter:blur(6px);padding:30px;cursor:zoom-out}
+  .lightbox.open{display:flex}
+  .lightbox img{max-width:96vw;max-height:92vh;border-radius:10px;background:#fff;padding:8px;
+     box-shadow:0 30px 80px rgba(0,0,0,.6);animation:lbin .25s cubic-bezier(.2,.7,.2,1)}
+  @keyframes lbin{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+  .lightbox .lb-cap{position:absolute;bottom:18px;left:0;right:0;text-align:center;color:var(--mut);
+     font-family:var(--mono);font-size:12.5px}
+  .lightbox .lb-close{position:absolute;top:18px;right:22px;font-size:30px;color:var(--mut);
+     cursor:pointer;line-height:1;transition:color .2s}
+  .lightbox .lb-close:hover{color:var(--txt)}
+
+  /* ---------- modal (contribution details) ---------- */
+  .modal-bg{position:fixed;inset:0;z-index:300;display:none;align-items:flex-start;justify-content:center;
+     background:rgba(3,6,18,.88);backdrop-filter:blur(7px);padding:48px 20px;overflow-y:auto}
+  .modal-bg.open{display:flex}
+  .modal{max-width:760px;width:100%;background:linear-gradient(180deg,var(--panel),var(--panel2));
+     border:1px solid var(--line);border-radius:18px;padding:34px 34px 30px;position:relative;
+     animation:lbin .28s cubic-bezier(.2,.7,.2,1);box-shadow:0 40px 90px rgba(0,0,0,.55)}
+  .modal .m-close{position:absolute;top:16px;right:20px;font-size:26px;color:var(--mut);cursor:pointer;line-height:1}
+  .modal .m-close:hover{color:var(--txt)}
+  .modal .m-kicker{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan)}
+  .modal h3{font-size:25px;margin:8px 0 6px}
+  .modal .m-eq{font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);border-radius:12px;
+     padding:16px 18px;margin:16px 0;overflow-x:auto;font-size:16px}
+  .modal p{color:var(--mut);font-size:15px;margin:12px 0}
+  .modal h4{font-family:var(--disp);font-size:15px;margin:20px 0 6px;color:var(--txt)}
+  .modal .m-list{color:var(--mut);font-size:14.5px;line-height:1.7;padding-left:20px;margin:8px 0}
+  .modal .m-list b{color:var(--txt)}
+  .modal .m-fig{margin-top:18px;background:#fff;border-radius:10px;padding:6px}
+  .modal .m-fig img{width:100%;display:block;border-radius:6px;cursor:zoom-in}
+  .modal .m-tag{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--mut);
+     border:1px solid var(--line);border-radius:7px;padding:3px 9px;margin:3px 6px 0 0}
+  body.noscroll{overflow:hidden}
+
   /* ---------- KaTeX integration ---------- */
   .katex{font-size:1em}                               /* inherit surrounding size */
   .eq .katex{font-size:30px;line-height:1}            /* big transform equations */
@@ -223,6 +268,7 @@
       <a href="#results">Results</a>
       <a href="#contributions">Contributions</a>
       <a href="#extensions">Extensions</a>
+      <a href="#benchmark">Benchmark</a>
       <a href="#architecture">Architecture</a>
       <a href="#references">References</a>
       <a href="cosmos_demo.html">Live demo</a>
@@ -313,20 +359,23 @@
       <p>Metric → optimality → safety-in-the-metric. Each piece reinforces the next.</p>
     </div>
     <div class="three">
-      <div class="card contrib reveal" style="--c:var(--cyan)">
+      <div class="card contrib reveal" style="--c:var(--cyan)" data-modal="c1">
         <div class="n">01</div><h3>Fuel-aware CW metric</h3>
         <p>Replace \(A^{\top}A\) with \(B^{\top}B\) so the covariant gradient minimizes true thrust energy. The planner spontaneously discovers natural coast arcs.</p>
         <div class="figframe"><img src="figures/chomp_part3_cw.png" alt="free-space vs fuel-aware transfer"/></div>
+        <span class="detail-link">Read the details →</span>
       </div>
-      <div class="card contrib reveal" style="--c:var(--mint)">
+      <div class="card contrib reveal" style="--c:var(--mint)" data-modal="c2">
         <div class="n">02</div><h3>Provable optimality</h3>
         <p>A closed-form LQ / Gramian optimum as ground truth. Fuel-aware CHOMP hits 1.00×; a naive Euclidean keep-out projection balloons to 15×.</p>
         <div class="figframe"><img src="figures/cosmos_optimal.png" alt="energy vs the analytical LQ optimum"/></div>
+        <span class="detail-link">Read the details →</span>
       </div>
-      <div class="card contrib reveal" style="--c:var(--peri)">
+      <div class="card contrib reveal" style="--c:var(--peri)" data-modal="c3">
         <div class="n">03</div><h3>Metric-aware safety</h3>
         <p>Project keep-outs in the fuel metric, not Euclidean space. A closed-form Riemannian projection cuts the premium 15× → 1.69×, still collision-free.</p>
         <div class="figframe"><img src="figures/cosmos_safe.png" alt="metric-aware vs metric-blind projection"/></div>
+        <span class="detail-link">Read the details →</span>
       </div>
     </div>
   </section>
@@ -339,38 +388,61 @@
       <p>Two additions that answer the two hardest questions a reviewer asks: <i>when does choosing the metric actually matter?</i> and <i>is the optimality a property of the method or of the tuning?</i></p>
     </div>
     <div class="ext">
-      <div class="card reveal">
+      <div class="card reveal" data-modal="e1">
         <div class="badge">01 · generality, where it pays</div>
         <h3>A time-varying metric for eccentric orbits</h3>
         <div class="eqn">\(B = D_2 - G(t)\) &nbsp;·&nbsp; Tschauner–Hempel</div>
         <p>Clohessy–Wiltshire assumes a <i>circular</i> reference orbit. Around an <b>eccentric</b> orbit the relative dynamics become time-varying, and a CW-&ldquo;passive&rdquo; relative orbit drifts by many times its own amplitude per revolution. Feeding the planner the correct time-varying block \(G(t)\) — the same construction, nothing else changed — and scoring against the <b>full nonlinear</b> relative dynamics, the Δv saving climbs from ~0% at \(e=0\) (so CW is validated for circular LEO) to <b>~16% at \(e=0.3\)</b>. The metric matters exactly when the dynamics do.</p>
         <div class="figframe"><img src="figures/cosmos_eccentric.png" alt="time-varying metric saving vs eccentricity"/></div>
+        <span class="detail-link">Read the details →</span>
       </div>
-      <div class="card reveal">
+      <div class="card reveal" data-modal="e2">
         <div class="badge">02 · a second-order guarantee</div>
         <h3>The preconditioner is the exact Gauss–Newton step</h3>
         <div class="eqn">\(\xi^\star = \xi_0 - (B^\top B)^{-1}\,\nabla U(\xi_0)\)</div>
         <p>The fuel cost is exactly quadratic, so its Hessian is \(M = B^\top B\) — precisely the covariant preconditioner. One unit step is therefore a full Newton step: from <b>any</b> start it reaches the closed-form optimum to machine precision in a <b>single iteration</b>. The &ldquo;1.00× optimal&rdquo; headline is a property of the method — the metric <i>is</i> the exact inverse Hessian — not an artifact of step-size or iteration budget. COSMOS is a second-order solver for the LQ transfer wearing CHOMP's covariant clothes.</p>
         <div class="figframe"><img src="figures/cosmos_newton.png" alt="single-step convergence of the covariant descent"/></div>
+        <span class="detail-link">Read the details →</span>
       </div>
     </div>
 
     <div class="three" style="margin-top:22px">
-      <div class="card contrib reveal" style="--c:var(--cyan)">
+      <div class="card contrib reveal" style="--c:var(--cyan)" data-modal="e3">
         <div class="n">E3</div><h3>Metric-aware inter-agent safety</h3>
         <p>Module B avoided <i>static</i> keep-outs cheaply; a swarm's hazard is the <i>other agents</i>. A <b>coupled</b> Riemannian projection enforces \(\lVert x_i(t)-x_j(t)\rVert \ge r\) in the joint fuel metric — strictly collision-free at <b>~1.3× lower Δv</b> than the metric-blind push.</p>
         <div class="figframe"><img src="figures/cosmos_swarm_safe.png" alt="metric-aware inter-agent separation"/></div>
+        <span class="detail-link">Read the details →</span>
       </div>
-      <div class="card contrib reveal" style="--c:var(--mint)">
+      <div class="card contrib reveal" style="--c:var(--mint)" data-modal="e4">
         <div class="n">E4</div><h3>MPC-ready (receding horizon)</h3>
         <p>Every other result is open-loop. Wrapped in a re-planning loop, closed-loop control cuts the terminal error <b>~10×</b> under process noise for a modest Δv premium — each re-plan is one Gauss–Newton step, so the metric is MPC-ready.</p>
         <div class="figframe"><img src="figures/cosmos_mpc.png" alt="open-loop vs MPC under disturbance"/></div>
+        <span class="detail-link">Read the details →</span>
       </div>
-      <div class="card contrib reveal" style="--c:var(--peri)">
+      <div class="card contrib reveal" style="--c:var(--peri)" data-modal="e5">
         <div class="n">E5</div><h3>Chance-constrained keep-outs</h3>
         <p>Under navigation uncertainty \(\sigma\), inflate the radius by \(\Phi^{-1}(\beta)\sigma\) to guarantee &ldquo;stay outside with probability \(\ge\beta\)&rdquo; — enforced by the <b>same</b> Module B projection. Monte Carlo shows the realized safety tracks the target.</p>
         <div class="figframe"><img src="figures/cosmos_chance.png" alt="chance-constrained keep-out calibration"/></div>
+        <span class="detail-link">Read the details →</span>
       </div>
+    </div>
+  </section>
+
+  <!-- BENCHMARK (v3) -->
+  <section id="benchmark">
+    <div class="sec-head reveal">
+      <div class="eyebrow accent-c">Benchmark <span class="newtag">v3</span></div>
+      <h2>Is it actually good — and fast?</h2>
+      <p>The base problem is linear-quadratic, so a fair critic asks: why a planner when the LQ optimum is closed-form? Because the LQ form can't represent a keep-out. Against the baselines a reviewer would demand — the analytic LQ optimum, and a general-purpose SQP solver (scipy SLSQP) on the exact constrained problem — COSMOS is <b>near-optimal, strictly feasible, and scales far better</b>.</p>
+    </div>
+    <div class="card reveal" data-modal="bench" style="cursor:pointer">
+      <div class="figframe"><img src="figures/cosmos_benchmark.png" alt="COSMOS vs SCP/SQP vs LQ"/></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px">
+        <div><div class="accent-c" style="font-family:var(--disp);font-weight:800;font-size:30px">&lt;1%</div><div class="mut" style="font-size:13.5px">Δv gap to the SCP optimum where SCP converges — near-optimal, not a heuristic</div></div>
+        <div><div class="accent-m" style="font-family:var(--disp);font-weight:800;font-size:30px">15–18×</div><div class="mut" style="font-size:13.5px">faster than SLSQP at N = 100–150 (log-scale panel, left)</div></div>
+        <div><div class="accent-p" style="font-family:var(--disp);font-weight:800;font-size:30px">feasible</div><div class="mut" style="font-size:13.5px">COSMOS stays collision-free where SLSQP exhausts its budget and cuts the keep-out</div></div>
+      </div>
+      <span class="detail-link accent-c">How the comparison is set up →</span>
     </div>
   </section>
 
@@ -476,13 +548,135 @@ python -m cosmos.cosmos_safe     <span class="ok"># 15× → 1.69× safety fix</
       <li style="break-inside:avoid;margin-bottom:11px">A. E. Bryson, Y.-C. Ho. <i style="color:var(--txt)">Applied Optimal Control</i> (LQ regulator, controllability Gramian). Hemisphere, 1975.</li>
       <li style="break-inside:avoid;margin-bottom:11px">H. W. Kuhn. <i style="color:var(--txt)">The Hungarian method for the assignment problem.</i> Naval Research Logistics Quarterly, 1955.</li>
       <li style="break-inside:avoid;margin-bottom:11px">S. Boyd, N. Parikh, E. Chu, B. Peleato, J. Eckstein. <i style="color:var(--txt)">Distributed optimization and statistical learning via the ADMM.</i> Found. &amp; Trends in ML, 2011.</li>
-      <li style="break-inside:avoid;margin-bottom:11px">J. Nocedal, S. J. Wright. <i style="color:var(--txt)">Numerical Optimization</i> (Gauss–Newton, Levenberg–Marquardt). Springer, 2006.</li>
+      <li style="break-inside:avoid;margin-bottom:11px">J. Nocedal, S. J. Wright. <i style="color:var(--txt)">Numerical Optimization</i> (Gauss–Newton, Levenberg–Marquardt, SQP). Springer, 2006.</li>
+      <li style="break-inside:avoid;margin-bottom:11px">X. Liu, P. Lu, B. Pan. <i style="color:var(--txt)">Survey of convex optimization for aerospace applications</i> (sequential convex programming for trajectories). Astrodynamics, 2017.</li>
       <li style="break-inside:avoid;margin-bottom:11px">H. Schaub, J. L. Junkins. <i style="color:var(--txt)">Analytical Mechanics of Space Systems</i> (relative orbital motion, formation flying). AIAA, 2018.</li>
     </ol>
   </section>
 
 </div>
 </main>
+
+<!-- ===== lightbox (figure zoom) ===== -->
+<div class="lightbox" id="lightbox" aria-hidden="true">
+  <span class="lb-close" id="lbClose">&times;</span>
+  <img id="lbImg" src="" alt=""/>
+  <div class="lb-cap" id="lbCap"></div>
+</div>
+
+<!-- ===== modal (contribution details) ===== -->
+<div class="modal-bg" id="modalBg" aria-hidden="true">
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <span class="m-close" id="mClose">&times;</span>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<!-- modal content store (read by JS; not rendered directly) -->
+<div id="modalStore" hidden>
+  <div data-id="c1">
+    <div class="m-kicker">Contribution 01 · the core idea</div>
+    <h3>Fuel-aware Clohessy–Wiltshire metric</h3>
+    <p>Standard CHOMP measures &ldquo;smoothness&rdquo; as the energy of the raw acceleration, \(\tfrac12\int\lVert\ddot\xi\rVert^2\). In orbit that is the wrong currency: the dynamics already supply acceleration for free, so the thruster only has to provide the <i>difference</i> between the acceleration you want and what gravity gives you.</p>
+    <div class="m-eq">$$F_{\text{fuel}}=\tfrac12\!\int\big\lVert\ddot\xi-f_{\text{CW}}(\xi,\dot\xi)\big\rVert^2dt,\qquad u=B\xi+c_0,\quad B=D_2-G_{\text{CW}}$$</div>
+    <p>Because the Clohessy–Wiltshire dynamics are linear, the control \(u\) is linear in the trajectory, and the smoothness metric becomes \(M=B^{\top}B\). The covariant descent \(\xi\leftarrow\xi-\alpha\,M^{-1}\nabla U\) then minimizes true thrust energy.</p>
+    <h4>Why it is new</h4>
+    <ul class="m-list"><li>CHOMP (Ratliff 2009) uses the dynamics-blind metric \(A^{\top}A\); classical astrodynamics has the LQ/CW optimum but no obstacle-aware planner. <b>COSMOS is the bridge</b>: the relative dynamics go into the covariant preconditioner itself.</li><li>The planner <b>spontaneously discovers natural coast arcs</b> — it rides the orbital drift instead of fighting it.</li></ul>
+    <h4>Result &amp; limits</h4>
+    <ul class="m-list"><li><b>~40% ± 10%</b> Δv saved vs dynamics-blind planning, over 10 random scenarios.</li><li>Reduces exactly to free-space CHOMP as the orbital rate \(n\to0\) (a locked regression test).</li><li>Limited to <b>linear</b> relative dynamics and <b>L2</b> control energy (we report the realized L1 Δv) — honest for the low-thrust regime.</li></ul>
+    <span class="m-tag">src/cosmos/chomp_cw.py</span><span class="m-tag">python -m cosmos.chomp_cw</span>
+    <div class="m-fig"><img src="figures/chomp_part3_cw.png" alt="fuel-aware vs free-space transfer"/></div>
+  </div>
+
+  <div data-id="c2">
+    <div class="m-kicker">Contribution 02 · Module A</div>
+    <h3>Provable optimality against the LQ / Gramian optimum</h3>
+    <p>The CW dynamics are linear and the fuel cost is quadratic, so the minimum-energy transfer is a Linear-Quadratic problem with a <b>closed-form optimum</b> via the controllability Gramian \(W(T)\):</p>
+    <div class="m-eq">$$J^\star=(s_f-\Phi(T)s_0)^{\top}W(T)^{-1}(s_f-\Phi(T)s_0)$$</div>
+    <p>This is an <i>analytical ground truth</i>: no planner can beat it. Fuel-aware CHOMP recovers it to <b>1.00×</b>; a dynamics-blind planner sits at 1.79×; and a naive Euclidean keep-out projection balloons to <b>15×</b> — the pitfall Module B then fixes.</p>
+    <h4>Why it matters</h4>
+    <ul class="m-list"><li>It turns &ldquo;our planner seems good&rdquo; into &ldquo;our planner is provably at the optimum&rdquo; in the unconstrained case.</li><li>It exposes, quantitatively, that the <b>metric</b> — not the solver — is what buys the fuel saving.</li></ul>
+    <span class="m-tag">src/cosmos/cosmos_optimal.py</span><span class="m-tag">python -m cosmos.cosmos_optimal</span>
+    <div class="m-fig"><img src="figures/cosmos_optimal.png" alt="energy vs the LQ optimum"/></div>
+  </div>
+
+  <div data-id="c3">
+    <div class="m-kicker">Contribution 03 · Module B</div>
+    <h3>Metric-aware safety (Riemannian projection)</h3>
+    <p>Enforcing a keep-out by snapping a waypoint radially out (Euclidean) ignores the fuel metric and costs 15× the optimal energy. Module B instead projects onto the constraint <i>in the metric</i> \(M=B^{\top}B\) — a closed-form minimum-fuel correction:</p>
+    <div class="m-eq">$$\delta\xi=\frac{M^{-1}a\,(b-a^{\top}\xi)}{a^{\top}M^{-1}a}$$</div>
+    <p>for a linearized keep-out \(a^{\top}\xi\ge b\). This cuts the safety premium from <b>15× to 1.69×</b> while staying strictly collision-free.</p>
+    <h4>Why it is new &amp; where it goes</h4>
+    <ul class="m-list"><li>Projection methods are standard; doing it <b>in the dynamics-induced Riemannian metric</b>, in closed form, is the novelty.</li><li>Extended in <b>E3</b> to moving inter-agent constraints and in <b>E5</b> to chance constraints.</li><li>Limits: static, spherical keep-outs, linearized per waypoint.</li></ul>
+    <span class="m-tag">src/cosmos/cosmos_safe.py</span><span class="m-tag">python -m cosmos.cosmos_safe</span>
+    <div class="m-fig"><img src="figures/cosmos_safe.png" alt="metric-aware vs metric-blind projection"/></div>
+  </div>
+
+  <div data-id="e1">
+    <div class="m-kicker">Extension E1 · generality where it pays</div>
+    <h3>Time-varying metric for eccentric orbits (Tschauner–Hempel)</h3>
+    <p>CW assumes a circular reference orbit. Around an <b>eccentric</b> orbit the linearized relative dynamics are time-varying — the coupling block depends on the true anomaly — so the construction becomes \(B=D_2-G(t)\). Everything else (preconditioner, closed-form optimum, projections) is unchanged.</p>
+    <div class="m-eq">$$\ddot x=K_x(t)\,x+K_v(t)\,\dot x+u,\qquad B=D_2-G(t)$$</div>
+    <h4>The honest, quantitative payoff</h4>
+    <ul class="m-list"><li>A CW-&ldquo;passive&rdquo; relative orbit drifts by <b>many times its amplitude per revolution</b> when the reference is eccentric — CW is genuinely the wrong metric there.</li><li>Scored against the <b>full nonlinear</b> relative dynamics, the Δv saving of the correct time-varying metric vs CW grows from <b>~0% at \(e=0\)</b> (validating CW for circular LEO) to <b>~16% at \(e=0.3\)</b>.</li><li>Holds <b>in 3D</b> too: the out-of-plane (cross-track) mode becomes the true time-varying gravity gradient \(z''=-(\mu/r^3)z\), and the saving curve is essentially the same with the cross-track component included.</li><li>Reduces to CW bit-for-bit at \(e=0\), in both 2D and 3D (regression tests).</li></ul>
+    <p>This is why the project is not a toy: the &ldquo;metric = dynamics&rdquo; claim is <i>demonstrated</i> where it matters, not merely asserted.</p>
+    <span class="m-tag">src/cosmos/cosmos_eccentric.py</span><span class="m-tag">python -m cosmos.cosmos_eccentric</span>
+    <div class="m-fig"><img src="figures/cosmos_eccentric.png" alt="saving vs eccentricity"/></div>
+  </div>
+
+  <div data-id="e2">
+    <div class="m-kicker">Extension E2 · a second-order guarantee</div>
+    <h3>The preconditioner is the exact Gauss–Newton step</h3>
+    <p>The unconstrained fuel cost \(U=\tfrac12\lVert B\xi+c_0\rVert^2\) is exactly quadratic, so its Hessian is \(H=B^{\top}B=M\) — <i>precisely</i> the covariant preconditioner. One unit step is therefore a full Newton step and lands on the optimum from any start:</p>
+    <div class="m-eq">$$\xi^\star=\xi_0-M^{-1}\nabla U(\xi_0)\quad\text{(exact, one iteration)}$$</div>
+    <h4>Why it matters</h4>
+    <ul class="m-list"><li>It reframes COSMOS from &ldquo;a smoother that converges&rdquo; to a <b>second-order solver</b> for the LQ transfer — the 1.00× result is a property of the method, not of step-size or iteration budget.</li><li>It is also what makes the per-step replanning in <b>E4 (MPC)</b> essentially free.</li></ul>
+    <span class="m-tag">src/cosmos/cosmos_newton.py</span><span class="m-tag">python -m cosmos.cosmos_newton</span>
+    <div class="m-fig"><img src="figures/cosmos_newton.png" alt="single-step convergence"/></div>
+  </div>
+
+  <div data-id="e3">
+    <div class="m-kicker">Extension E3 · swarm safety</div>
+    <h3>Metric-aware inter-agent safety (coupled Riemannian projection)</h3>
+    <p>A swarm's real hazard is the other agents. The separation constraint \(\lVert x_i(t)-x_j(t)\rVert\ge r\) couples two trajectories at the same instant. Stacking \(z=[\xi_i;\xi_j]\) with the block-diagonal metric \(\mathrm{diag}(M,M)\), the minimum-fuel correction is again closed form and splits into two per-agent pushes sharing one multiplier:</p>
+    <div class="m-eq">$$\lambda=\frac{b-a^{\top}z}{a_i^{\top}M^{-1}a_i+a_j^{\top}M^{-1}a_j},\quad \xi_i\mathrel{+}=\lambda M^{-1}a_i,\ \xi_j\mathrel{+}=\lambda M^{-1}a_j$$</div>
+    <p>Each agent moves the way that is cheapest in its own fuel metric. Result: strictly collision-free at <b>~1.3× lower Δv</b> than the metric-blind &ldquo;push both apart equally&rdquo; — the swarm analogue of Module B.</p>
+    <span class="m-tag">src/cosmos/cosmos_swarm_safe.py</span><span class="m-tag">python -m cosmos.cosmos_swarm_safe</span>
+    <div class="m-fig"><img src="figures/cosmos_swarm_safe.png" alt="inter-agent metric safety"/></div>
+  </div>
+
+  <div data-id="e4">
+    <div class="m-kicker">Extension E4 · closed loop</div>
+    <h3>Receding-horizon replanning (MPC-ready)</h3>
+    <p>Every other result is open-loop. Under process noise an open-loop plan drifts off. Wrapping the fuel-aware solver in a receding-horizon loop — execute one step, re-plan from the measured state, repeat — cuts the terminal error <b>~10×</b> for a modest Δv premium.</p>
+    <h4>The connection to E2</h4>
+    <ul class="m-list"><li>Each re-plan is essentially <b>one Gauss–Newton step</b> (E2), so MPC is cheap to run: the metric is MPC-ready out of the box.</li><li>Honest scope: this is standard receding-horizon control; the novelty is that COSMOS's own covariant solver is the inner planner.</li></ul>
+    <span class="m-tag">src/cosmos/cosmos_mpc.py</span><span class="m-tag">python -m cosmos.cosmos_mpc</span>
+    <div class="m-fig"><img src="figures/cosmos_mpc.png" alt="open-loop vs MPC"/></div>
+  </div>
+
+  <div data-id="e5">
+    <div class="m-kicker">Extension E5 · robustness</div>
+    <h3>Chance-constrained keep-outs under navigation uncertainty</h3>
+    <p>The keep-out radius is treated as exact, but position is known only up to navigation error \(\sigma\). Requiring the true position to stay outside with probability \(\ge\beta\) becomes a deterministic constraint on the mean, with an inflated radius:</p>
+    <div class="m-eq">$$r_{\text{safe}}=r_{\text{phys}}+\Phi^{-1}(\beta)\,\sigma$$</div>
+    <p>Planning against \(r_{\text{safe}}\) with the <b>same</b> Module B projection then guarantees the chance constraint — zero new machinery. Monte Carlo confirms the realized safety tracks the target \(\beta\), and Δv rises smoothly with the safety level: a tunable safety/fuel trade.</p>
+    <span class="m-tag">src/cosmos/cosmos_chance.py</span><span class="m-tag">python -m cosmos.cosmos_chance</span>
+    <div class="m-fig"><img src="figures/cosmos_chance.png" alt="chance-constraint calibration"/></div>
+  </div>
+
+  <div data-id="bench">
+    <div class="m-kicker">Benchmark · the justification</div>
+    <h3>COSMOS vs SCP/SQP vs the LQ optimum</h3>
+    <p>To show the problem is non-trivial and the method performant, COSMOS is compared on the <i>same</i> hard (non-convex keep-out) problem against the baselines a reviewer demands:</p>
+    <ul class="m-list"><li><b>LQ (analytic)</b> — the closed-form unconstrained optimum. It <i>violates</i> the keep-out (it has no obstacle notion), so a real constrained planner is required.</li><li><b>SCP / SQP</b> — a general-purpose sequential-quadratic-programming solver (scipy SLSQP) minimizing the exact control energy subject to the hard keep-out. The serious alternative.</li><li><b>COSMOS</b> — the fuel metric + closed-form Riemannian projection, with adaptive convergence.</li></ul>
+    <h4>Findings</h4>
+    <ul class="m-list"><li>Where SLSQP converges (small horizons), COSMOS matches its optimum to <b>&lt;1% in Δv</b> and stays strictly collision-free — near-optimal, not a heuristic.</li><li>COSMOS <b>scales far better</b>: SLSQP factorizes dense Jacobians/Hessians that grow with the horizon (roughly cubic per iteration); COSMOS's covariant step is a fixed structured solve. At \(N\!\approx\!150\) COSMOS is <b>15–18× faster</b> and still feasible, while SLSQP exhausts its budget and returns an infeasible trajectory that cuts the keep-out.</li></ul>
+    <p>That is the real justification: a planner that reaches a general optimizer's quality on the hard, coupled, safety-constrained problem at a fraction of the cost — because the metric encodes the dynamics.</p>
+    <span class="m-tag">src/cosmos/cosmos_benchmark.py</span><span class="m-tag">python -m cosmos.cosmos_benchmark</span>
+    <div class="m-fig"><img src="figures/cosmos_benchmark.png" alt="COSMOS vs SCP vs LQ"/></div>
+  </div>
+</div>
 
 <footer>
   <div class="wrap foot">
@@ -529,6 +723,44 @@ python -m cosmos.cosmos_safe     <span class="ok"># 15× → 1.69× safety fix</
   const tg=document.getElementById('navtoggle'),nl=document.getElementById('navlinks');
   tg.addEventListener('click',()=>nl.classList.toggle('open'));
   nl.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>nl.classList.remove('open')));
+
+  // ---------- lightbox: click any figure to zoom ----------
+  const lb=document.getElementById('lightbox'),lbImg=document.getElementById('lbImg'),
+        lbCap=document.getElementById('lbCap'),lbClose=document.getElementById('lbClose');
+  function openLightbox(src,cap){lbImg.src=src;lbCap.textContent=cap||'';lb.classList.add('open');
+    document.body.classList.add('noscroll');}
+  function closeLightbox(){lb.classList.remove('open');if(!modalBg.classList.contains('open'))
+    document.body.classList.remove('noscroll');}
+  document.addEventListener('click',(e)=>{
+    const img=e.target.closest('.figframe img, .m-fig img');
+    if(img){e.stopPropagation();openLightbox(img.src,img.alt);}});
+  lb.addEventListener('click',closeLightbox);
+  lbClose.addEventListener('click',closeLightbox);
+
+  // ---------- modal: click a contribution/benchmark card for details ----------
+  const modalBg=document.getElementById('modalBg'),modalBody=document.getElementById('modalBody'),
+        mClose=document.getElementById('mClose'),store=document.getElementById('modalStore');
+  function openModal(id){
+    const src=store.querySelector(`[data-id="${id}"]`); if(!src) return;
+    modalBody.innerHTML=src.innerHTML;
+    modalBg.classList.add('open'); document.body.classList.add('noscroll');
+    document.getElementById('modal').scrollTop=0;
+    if(window.renderMathInElement){renderMathInElement(modalBody,{delimiters:[
+      {left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}],throwOnError:false});}
+  }
+  function closeModal(){modalBg.classList.remove('open');modalBody.innerHTML='';
+    if(!lb.classList.contains('open'))document.body.classList.remove('noscroll');}
+  document.querySelectorAll('[data-modal]').forEach(card=>{
+    card.addEventListener('click',(e)=>{
+      if(e.target.closest('.figframe img'))return;   // image clicks go to the lightbox
+      openModal(card.getAttribute('data-modal'));});});
+  modalBg.addEventListener('click',(e)=>{if(e.target===modalBg)closeModal();});
+  mClose.addEventListener('click',closeModal);
+
+  // Esc closes the topmost overlay
+  document.addEventListener('keydown',(e)=>{if(e.key!=='Escape')return;
+    if(lb.classList.contains('open'))closeLightbox();
+    else if(modalBg.classList.contains('open'))closeModal();});
 </script>
 </body>
 </html>

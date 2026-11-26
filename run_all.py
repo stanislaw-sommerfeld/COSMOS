@@ -72,6 +72,8 @@ CORE = [
      ["-m", "cosmos.cosmos_mpc"]),
     ("Extension · chance-constrained keep-outs under nav. uncertainty [E5]",
      ["-m", "cosmos.cosmos_chance"]),
+    ("Benchmark · COSMOS vs SCP/SQP vs LQ (near-optimal, feasible, scalable)",
+     ["-m", "cosmos.cosmos_benchmark"]),
     ("Motivation · CW-passive orbit vs realistic J2 (Schweighart–Sedwick)",
      ["-m", "cosmos.cw_vs_j2_demo"]),
     ("Swarm · price of decoupling (joint vs Gauss–Seidel)",

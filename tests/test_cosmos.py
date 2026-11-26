@@ -210,6 +210,32 @@ def test_eccentric_metric_beats_cw_metric():
 
 
 # ---------------------------------------------------------------------------
+# T10b - the eccentric result also holds in 3D (cross-track), scored under the
+#        full 3D nonlinear dynamics; and the 3D TH operator reduces to CW-3D at e=0
+# ---------------------------------------------------------------------------
+def test_eccentric_metric_holds_in_3d():
+    from cosmos._core import (time_varying_operators, time_varying_offset,
+                              tschauner_hempel_coeffs)
+    from cosmos.chomp_cw import cw_operators, cw_offset
+    N, T, nm = 50, np.pi, 1.0
+    dt = T / (N + 1)
+    # 3D at e=0 reproduces CW-3D bit-for-bit (strict superset)
+    coeff = lambda t: tschauner_hempel_coeffs(t, e=0.0, nm=nm, dim=3)
+    B_tv, _, bl = time_varying_operators(N, dt, coeff, w_bc=0.0, dim=3)
+    B_cw, _, blcw = cw_operators(N, dt, nm, w_bc=0.0, dim=3)
+    assert np.allclose(B_tv, B_cw, atol=1e-12)
+    s3, g3 = np.array([3.0, 5.0, 2.0]), np.array([0.0, 0.0, 0.0])
+    assert np.allclose(time_varying_offset(bl, s3, g3),
+                       cw_offset(blcw, s3, g3), atol=1e-12)
+    # and the saving curve in 3D behaves like 2D: ~0 at e=0, large at e=0.3
+    from cosmos import cosmos_eccentric as ecc
+    rows = ecc.run(eccentricities=(0.0, 0.3), N=70, dim=3, verbose=False)
+    by = {r["e"]: r for r in rows}
+    assert abs(by[0.0]["saving"]) < 0.5
+    assert by[0.3]["saving"] > 5.0
+
+
+# ---------------------------------------------------------------------------
 # T11 - the covariant preconditioner is the exact Gauss-Newton step
 # ---------------------------------------------------------------------------
 def test_preconditioner_is_exact_gauss_newton():
@@ -276,6 +302,26 @@ def test_chance_constraint_is_calibrated_and_monotone():
     assert by[0.99]["dv"] > by[0.5]["dv"]
     # calibrated: the high-safety level is at least roughly met (conservative is ok)
     assert (1 - by[0.99]["rate"]) >= 0.95
+
+
+# ---------------------------------------------------------------------------
+# T16 - COSMOS matches the SCP/SQP optimum on the constrained problem (near-optimal)
+# ---------------------------------------------------------------------------
+def test_cosmos_matches_scp_on_constrained_problem():
+    from cosmos import cosmos_benchmark as bench
+    N = 40; nm = 1.0; T = np.pi; dt = T / (N + 1); w_bc = 20000.0
+    start = np.array([3.0, 5.0]); goal = np.array([0.0, 0.0])
+    obs = [{"c": np.array([2.5, 2.9]), "r": 1.1}]
+    scp, _, ok = bench.solve_scp(start, goal, nm, N, dt, obs, w_bc)
+    cos, _ = bench.solve_cosmos(start, goal, nm, N, dt, obs, w_bc)
+    # both must respect the keep-out
+    assert bench.clearance(scp, start, goal, obs) > -1e-3
+    assert bench.clearance(cos, start, goal, obs) > -1e-3
+    dv_scp, _ = delta_v(scp, start, goal, dt, nm)
+    dv_cos, _ = delta_v(cos, start, goal, dt, nm)
+    # COSMOS is within a few percent of the general-purpose constrained optimum
+    assert abs(dv_cos - dv_scp) / dv_scp < 0.05, \
+        f"COSMOS Δv {dv_cos:.3f} vs SCP {dv_scp:.3f} (gap {100*abs(dv_cos-dv_scp)/dv_scp:.1f}%)"
 
 
 if __name__ == "__main__":

@@ -130,5 +130,5 @@ if __name__ == "__main__":
 
     fig.suptitle("COSMOS - multi-seed validation", fontsize=13, fontweight="bold")
     fig.tight_layout()
-    fig.savefig("cosmos_validation.png", dpi=120)
+    fig.savefig("cosmos_validation.png", dpi=150)
     print("\nFigure -> cosmos_validation.png")

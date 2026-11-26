@@ -230,5 +230,5 @@ if __name__ == "__main__":
                  f"total delta-v: fuel-aware {dv_fuel:.2f} vs free-space {dv_free:.2f}",
                  fontsize=11, fontweight="bold")
     fig.tight_layout()
-    fig.savefig(out, dpi=120)
+    fig.savefig(out, dpi=150)
     print(f"\nFigure -> {out}")

@@ -134,7 +134,7 @@ def main():
              "— feed the planner the right G and 'free' means free for real.",
              ha="center", fontsize=7.5, color="#555")
     fig.tight_layout(rect=(0, 0.03, 1, 1))
-    fig.savefig("cw_vs_j2.png", dpi=130)
+    fig.savefig("cw_vs_j2.png", dpi=150)
     print("\nFigure -> cw_vs_j2.png")
 
 
