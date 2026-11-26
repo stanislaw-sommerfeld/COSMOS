@@ -124,6 +124,8 @@ python -m cosmos.cosmos_validation # robustness (slowest; a few minutes)
 python -m cosmos.cosmos_units      # credible m/s numbers
 python -m cosmos.cosmos_optimal    # 1.00× LQ optimum + the 15× pitfall   (Module A)
 python -m cosmos.cosmos_safe       # 15× → 1.69× safety fix                (Module B)
+python -m cosmos.cosmos_eccentric  # time-varying metric, eccentric orbits (extension)
+python -m cosmos.cosmos_newton     # exact Gauss–Newton preconditioner     (extension)
 python -m cosmos.pygame_orbital_sim   # real-time viewer (needs ".[viz]" + a display)
 ```
 
@@ -157,6 +159,9 @@ The science is built up in layers, each a self-contained module inside the `cosm
 | 7 | `cosmos_units` | Realistic LEO SI units (m/s) |
 | 8 | `cosmos_optimal` | **Module A:** analytical LQ optimum (1.00×) |
 | 9 | `cosmos_safe` | **Module B:** Riemannian safe projection (15× → 1.69×) |
+| 10 | `cosmos_eccentric` | **Extension:** time-varying metric for eccentric orbits (TH) |
+| 11 | `cosmos_newton` | **Extension:** the preconditioner is the exact Gauss–Newton step |
+| — | `_core` | Shared numerics: Gramian, LQ optimum, projections, time-varying operators |
 | — | `cli` | **Unified driver** composing the above into the mission |
 
 ## 📂 Repository structure
@@ -177,13 +182,17 @@ cosmos/
 ├── figures/               ← curated result figures + animation
 └── src/
     └── cosmos/            ← the importable package
-        ├── __init__.py
+        ├── __init__.py             curated public API (re-exports the core)
+        ├── _core.py                shared numerics: Gramian, LQ optimum, projections,
+        │                             CW state system, time-varying operators
         ├── cli.py                  unified mission driver
         ├── chomp_single_agent.py   covariant CHOMP core
         ├── chomp_swarm.py          multi-agent decoupling
         ├── chomp_cw.py             fuel-aware CW metric  +  B = D₂ − G generality
         ├── cosmos_full.py          full system (2D / --3d)
         ├── cosmos_generality.py    one solver, any linear dynamics (free / CW / J2)
+        ├── cosmos_eccentric.py     extension — time-varying metric, eccentric orbits
+        ├── cosmos_newton.py        extension — exact Gauss–Newton preconditioner
         ├── cw_vs_j2_demo.py        motivation: a CW-passive orbit is not J2-passive
         ├── cosmos_joint.py         swarm: price-of-decoupling analysis
         ├── cosmos_validation.py    multi-seed validation
@@ -208,6 +217,26 @@ cosmos/
 **3 · Metric-aware safety (Module B).** That 15× pitfall is fixed by projecting onto safety constraints *in the fuel metric* $B^\top B$ rather than in Euclidean space — a closed-form Riemannian projection that cuts the safety premium to **1.69×** while staying strictly collision-free.
 
 <div align="center"><img src="figures/cosmos_safe.png" width="620"/></div>
+
+## 🧪 Extensions (v2)
+
+Two additions that answer the two hardest questions about the method.
+
+**4 · A time-varying metric for eccentric orbits (Tschauner–Hempel).** Clohessy–Wiltshire assumes a *circular* reference orbit. Around an **eccentric** orbit the linearized relative dynamics are time-varying, and a CW-"passive" relative orbit drifts by many times its own amplitude per revolution. COSMOS's construction generalizes with a single change — the dynamics block becomes $G(t)$, so $B = D_2 - G(t)$ — and nothing else moves. Planning in the correct time-varying metric and scoring against the **full nonlinear** relative equations of motion, the Δv saving climbs from ~0% at $e=0$ (CW is validated for circular LEO) to **~16% at $e=0.3$**. The metric matters exactly when the dynamics do.
+
+```bash
+python -m cosmos.cosmos_eccentric   # saving-vs-eccentricity curve
+```
+
+<div align="center"><img src="figures/cosmos_eccentric.png" width="720"/></div>
+
+**5 · The preconditioner is the exact Gauss–Newton step.** The fuel cost is exactly quadratic, so its Hessian is $M = B^\top B$ — precisely the covariant preconditioner. One unit covariant step is therefore a full Newton step: from *any* start it reaches the closed-form optimum to machine precision in a **single iteration**. The "1.00× optimal" headline is a property of the method (the metric *is* the exact inverse Hessian), not of the step size or iteration budget.
+
+```bash
+python -m cosmos.cosmos_newton      # single-step convergence
+```
+
+> **Code-quality note (v2).** The shared numerics — the controllability Gramian, the CW state system, the closed-form LQ optimum, and the Euclidean/Riemannian keep-out projections — now live once in [`cosmos/_core.py`](src/cosmos/_core.py) instead of being copy-pasted across modules. Modules A and B are importable (no side effects at import) and unit-tested. A faster, exact Van Loan Gramian is available via `controllability_gramian(..., method="vanloan")`. The regression suite grew from 8 to **12 tests**; every headline number is unchanged.
 
 ## 🖼️ Gallery
 
