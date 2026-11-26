@@ -42,6 +42,16 @@ That single substitution — from $A^\top A$ (raw acceleration) to $B^\top B$ (t
 | Collision-free success rate | **100%** (hardened mode) |
 | Realistic LEO (500 km) per-satellite cost | **~1–2 m/s**, arriving at cm/s |
 
+**Extensions (v2)** — the same construction, pushed further:
+
+| Extension | Result |
+|---|---|
+| Time-varying metric for **eccentric** orbits (TH) | **~16%** Δv saved at $e=0.3$ (0% at $e=0$, validating CW for circular LEO) |
+| Exact **Gauss–Newton** optimality | the 1.00× optimum is reached in a **single** covariant step from any start |
+| Metric-aware **inter-agent** safety | collision-free at **~1.3× lower Δv** than the metric-blind push |
+| **Receding-horizon** (MPC) | terminal error cut **~10×** under process noise |
+| **Chance-constrained** keep-outs | realized safety calibrated to the target $\beta$ under navigation uncertainty |
+
 ## 💡 The core idea
 
 CHOMP minimizes a functional combining smoothness and obstacle cost, and descends it with a **covariant** (metric-preconditioned) gradient:
