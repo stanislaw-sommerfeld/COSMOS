@@ -278,5 +278,25 @@ def test_chance_constraint_is_calibrated_and_monotone():
     assert (1 - by[0.99]["rate"]) >= 0.95
 
 
+# ---------------------------------------------------------------------------
+# T16 - COSMOS matches the SCP/SQP optimum on the constrained problem (near-optimal)
+# ---------------------------------------------------------------------------
+def test_cosmos_matches_scp_on_constrained_problem():
+    from cosmos import cosmos_benchmark as bench
+    N = 40; nm = 1.0; T = np.pi; dt = T / (N + 1); w_bc = 20000.0
+    start = np.array([3.0, 5.0]); goal = np.array([0.0, 0.0])
+    obs = [{"c": np.array([2.5, 2.9]), "r": 1.1}]
+    scp, _, ok = bench.solve_scp(start, goal, nm, N, dt, obs, w_bc)
+    cos, _ = bench.solve_cosmos(start, goal, nm, N, dt, obs, w_bc)
+    # both must respect the keep-out
+    assert bench.clearance(scp, start, goal, obs) > -1e-3
+    assert bench.clearance(cos, start, goal, obs) > -1e-3
+    dv_scp, _ = delta_v(scp, start, goal, dt, nm)
+    dv_cos, _ = delta_v(cos, start, goal, dt, nm)
+    # COSMOS is within a few percent of the general-purpose constrained optimum
+    assert abs(dv_cos - dv_scp) / dv_scp < 0.05, \
+        f"COSMOS Δv {dv_cos:.3f} vs SCP {dv_scp:.3f} (gap {100*abs(dv_cos-dv_scp)/dv_scp:.1f}%)"
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
