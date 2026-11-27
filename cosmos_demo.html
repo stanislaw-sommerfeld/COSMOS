@@ -115,6 +115,16 @@
 
     <div class="card controls">
       <div class="grp">
+        <label class="lab">scénario</label>
+        <div class="toggles" id="presets">
+          <button class="tog b on" data-scn="reconfig">reconfiguration</button>
+          <button class="tog b" data-scn="debris">rendez-vous</button>
+          <button class="tog b" data-scn="avoid">évitement</button>
+        </div>
+        <div class="hint" id="scnhint">Un satellite rejoint sa cible en contournant la zone interdite.</div>
+      </div>
+
+      <div class="grp">
         <label class="lab" for="nm">mean motion&nbsp;&nbsp;n
           <span class="val" id="nmv">1.00</span></label>
         <input type="range" id="nm" min="0" max="1.4" step="0.01" value="1.0" />
@@ -481,12 +491,32 @@ $('res').addEventListener('input',e=>{ N=+e.target.value; $('resv').textContent=
 $('rad').addEventListener('input',e=>{ S.obs.r=+e.target.value; $('radv').textContent=S.obs.r.toFixed(2); });
 $('tBase').addEventListener('click',e=>{ showBase=!showBase; e.target.classList.toggle('on',showBase); });
 $('tThrust').addEventListener('click',e=>{ showThrust=!showThrust; e.target.classList.toggle('on',showThrust); });
-$('reset').addEventListener('click',()=>{ S=JSON.parse(JSON.stringify(DEFAULT));
+/* ---- preset scenarios (one click = see the point) ---- */
+const SCENARIOS = {
+  reconfig: { S:{start:{x:3.2,y:-5.2}, goal:{x:-2.4,y:4.6}, obs:{x:0.1,y:0.2,r:1.4}}, nm:1.0,
+    hint:"Un satellite rejoint sa cible en contournant la zone interdite." },
+  debris:   { S:{start:{x:4.8,y:-5.6}, goal:{x:-3.2,y:5.2}, obs:{x:0.0,y:0.0,r:0.0}}, nm:1.0,
+    hint:"Rendez-vous libre (sans obstacle) : le chemin épouse la dérive orbitale." },
+  avoid:    { S:{start:{x:3.0,y:-4.6}, goal:{x:-3.0,y:4.6}, obs:{x:0.0,y:0.0,r:2.2}}, nm:1.0,
+    hint:"Gros obstacle au centre : COSMOS contourne 'dans la métrique fuel'." },
+};
+function applyScenario(name){
+  const sc=SCENARIOS[name]; if(!sc) return;
+  S=JSON.parse(JSON.stringify(sc.S));
+  nm=sc.nm; $('nm').value=nm; $('nmv').textContent=nm.toFixed(2);
   $('rad').value=S.obs.r; $('radv').textContent=S.obs.r.toFixed(2);
-  rebuild(); resetTraj(); });
+  $('scnhint').textContent=sc.hint;
+  document.querySelectorAll('#presets .tog').forEach(b=>
+    b.classList.toggle('on', b.getAttribute('data-scn')===name));
+  rebuild(); resetTraj();
+}
+document.querySelectorAll('#presets .tog').forEach(b=>
+  b.addEventListener('click',()=>applyScenario(b.getAttribute('data-scn'))));
+
+$('reset').addEventListener('click',()=>applyScenario('reconfig'));
 
 /* boot */
-rebuild(); resetTraj();
+applyScenario('reconfig');
 requestAnimationFrame(frame);
 </script>
 </body>
