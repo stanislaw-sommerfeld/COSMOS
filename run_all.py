@@ -74,6 +74,8 @@ CORE = [
      ["-m", "cosmos.cosmos_chance"]),
     ("Benchmark · COSMOS vs SCP/SQP vs LQ (near-optimal, feasible, scalable)",
      ["-m", "cosmos.cosmos_benchmark"]),
+    ("Validity · regime map: when does the eccentric metric pay? (honest study)",
+     ["-m", "cosmos.cosmos_validity"]),
     ("Motivation · CW-passive orbit vs realistic J2 (Schweighart–Sedwick)",
      ["-m", "cosmos.cw_vs_j2_demo"]),
     ("Swarm · price of decoupling (joint vs Gauss–Seidel)",

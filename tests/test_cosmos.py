@@ -307,6 +307,18 @@ def test_chance_constraint_is_calibrated_and_monotone():
 # ---------------------------------------------------------------------------
 # T16 - COSMOS matches the SCP/SQP optimum on the constrained problem (near-optimal)
 # ---------------------------------------------------------------------------
+def test_eccentric_advantage_is_a_robust_regime():
+    """The eccentric-metric saving is positive across the small-to-moderate
+       amplitude envelope and grows with eccentricity -- not a cherry-picked point."""
+    from cosmos import cosmos_validity as val
+    r = val.run(eccentricities=(0.1, 0.3), amplitudes=(0.03, 0.1), N=70, verbose=False)
+    grid = r["grid"]
+    # every cell in the envelope saves fuel
+    assert (grid > 0).all(), f"some cells non-positive:\n{grid}"
+    # saving grows with eccentricity (col for e=0.3 > col for e=0.1), each row
+    assert (grid[:, 1] > grid[:, 0]).all(), "saving should grow with eccentricity"
+
+
 def test_cosmos_matches_scp_on_constrained_problem():
     from cosmos import cosmos_benchmark as bench
     N = 40; nm = 1.0; T = np.pi; dt = T / (N + 1); w_bc = 20000.0
