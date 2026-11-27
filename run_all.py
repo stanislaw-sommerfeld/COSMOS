@@ -40,6 +40,8 @@ def run(title, module_args, cwd=None):
 
 # (title, args)  — args passed to the current Python interpreter
 CORE = [
+    ("Headline · the concrete gain (hero 2D + 3D)",
+     ["-m", "cosmos.cosmos_hero"]),
     ("Mission · reconfiguration (fuel · riemann · hungarian · 2D)",
      ["-m", "cosmos.cli", "--out", "cosmos_mission_reconfig.png"]),
     ("Mission · debris rendezvous (3D · SI units)",
