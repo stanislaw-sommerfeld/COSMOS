@@ -14,9 +14,13 @@
 
 <br/>
 
-<img src="figures/cosmos_reconfig.png" alt="Formation reconfiguration: launch train to passive 2:1 relative orbit" width="640"/>
+<img src="figures/cosmos_hero.png" alt="Formation reconfiguration: 40% less fuel with COSMOS" width="760"/>
 
-*A four-satellite launch train reconfigures into a passive 2:1 relative orbit. Solid curves (fuel-aware) ride the natural orbital drift; dashed curves (free-space) push straight through it.*
+*Four satellites reconfigure their formation. Dashed = **without** COSMOS (pushes straight through the orbital drift); solid = **with** COSMOS (rides the drift). Same mission, same collision-free safety, **40 % less propellant** — the per-satellite fuel bars (right) show it at a glance.*
+
+<img src="figures/cosmos_hero_3d.gif" alt="COSMOS in 3D: out-of-plane rendezvous, 46% less fuel" width="420"/>
+
+*The same idea in 3D (out-of-plane rendezvous): **−46 %** fuel, collision-free.*
 
 </div>
 

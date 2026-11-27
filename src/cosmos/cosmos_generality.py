@@ -48,44 +48,70 @@ def main():
     T = 1.5 * np.pi; N = 60; dt = T / (N + 1)
     start = np.array([3.0, 5.0]); goal = np.array([0.0, 0.0])
 
-    cases = [("free space",            (0.0, 0.0),            "#8b97a8", "-"),
-             ("Clohessy–Wiltshire",    cw_coeffs(nm),         "#2563EB", "-"),
-             ("J2 / Schweighart–Sedwick", ss_coeffs(nm, inc), "#DC2626", "--")]
-
-    print("=== Generality: B = D2 - G, one solver, three dynamics (change 2 numbers) ===")
-    plans = []
-    for name, (kxx, kc), color, ls in cases:
-        traj, dv = plan(kxx, kc, start, goal, N, dt)
-        plans.append((name, traj, color, ls, dv))
-        print(f"{name:26}  kxx={kxx:7.4f}  kc={kc:7.4f}   (energy-optimal plan, dv={dv:.3f})")
-
+    print("=== Generality: B = D2 - G, one solver, any linear dynamics (change 2 numbers) ===")
     cwc, ssc = cw_coeffs(nm), ss_coeffs(nm, inc)
-    dcoeff = max(abs(cwc[0]-ssc[0]), abs(cwc[1]-ssc[1]))
-    print(f"\nCW vs J2 coefficient difference: {dcoeff:.2e}  -> the two plans coincide at")
-    print("LEO over a short transfer (CW is adequate here). J2 matters over long horizons")
-    print("(formation maintenance) -- future work. The construction itself is unchanged.")
+    for name, (kxx, kc) in [("free space", (0.0, 0.0)),
+                            ("Clohessy-Wiltshire", cwc),
+                            ("J2 / Schweighart-Sedwick", ssc)]:
+        _, dv = plan(kxx, kc, start, goal, N, dt)
+        print(f"{name:26}  kxx={kxx:8.4f}  kc={kc:8.4f}   (energy-optimal plan, dv={dv:.3f})")
+    dcoeff = max(abs(cwc[0] - ssc[0]), abs(cwc[1] - ssc[1]))
+    print(f"\nCW vs J2 coefficient difference at LEO: {dcoeff:.2e}  -> the two plans coincide")
+    print("(CW is adequate for short LEO transfers). J2 matters over long horizons.")
 
-    # ---- figure ----
-    fig, ax = plt.subplots(figsize=(7.6, 7.0))
-    for name, traj, color, ls, dv in plans:
+    # ========================================================================
+    # Two panels: (L) the construction accepts ANY linear dynamics -- shown with
+    # three GENUINELY distinct G, so the point is visible; (R) the honest LEO
+    # zoom, CW vs J2, which coincide -- annotated so it reads as the claim, not a
+    # glitch.
+    # ========================================================================
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(13, 5.8))
+
+    # --- Left: distinct dynamics (vary the radial stiffness / Coriolis freely) ---
+    # These are illustrative linear dynamics (not all physical) whose only purpose
+    # is to show that plugging a different G gives a different optimal plan with
+    # the SAME solver. CW is one of them.
+    demo = [("free space            (kxx, kc)=(0, 0)",        (0.0, 0.0),          "#8b97a8", "-"),
+            ("Clohessy-Wiltshire    (3n², 2n)",               cwc,                 "#2563EB", "-"),
+            ("stiffer coupling      (6n², 3n)",               (6.0 * nm**2, 3*nm), "#1d9e75", "-"),
+            ("retrograde coupling   (3n², -2n)",              (3.0 * nm**2, -2*nm),"#DC2626", "-")]
+    for name, (kxx, kc), color, ls in demo:
+        traj, dv = plan(kxx, kc, start, goal, N, dt)
         Q = np.vstack([start, traj, goal])
-        ax.plot(Q[:, 1], Q[:, 0], ls, color=color, lw=2.6 if ls == "-" else 2.0,
-                label=f"{name}", alpha=0.95)
-    ax.scatter(start[1], start[0], c="k", s=55, zorder=5)
-    ax.scatter(goal[1], goal[0], c="k", marker="*", s=200, zorder=5)
-    ax.annotate("start", (start[1], start[0]), textcoords="offset points",
-                xytext=(8, 6), fontsize=9)
-    ax.annotate("goal", (goal[1], goal[0]), textcoords="offset points",
-                xytext=(8, 6), fontsize=9)
-    ax.set_xlabel("along-track  y"); ax.set_ylabel("radial  x")
-    ax.set_aspect("equal"); ax.grid(alpha=0.3); ax.legend(fontsize=10, loc="best")
-    ax.set_title("COSMOS — one construction, any linear dynamics (B = D₂ − G)\n"
-                 "free vs CW differ visibly; CW vs J2 coincide at LEO (CW is adequate here)",
-                 fontsize=11, fontweight="bold")
-    fig.text(0.5, 0.01,
-             "Only two coefficients (kxx, kc) change between dynamics — the metric BᵀB, "
-             "preconditioner and solver are identical. That is the generality claim, in code.",
-             ha="center", fontsize=8, color="#555")
+        axL.plot(Q[:, 1], Q[:, 0], ls, color=color, lw=2.6, label=f"{name}  ·  Δv={dv:.2f}")
+    axL.scatter(start[1], start[0], c="k", s=55, zorder=5)
+    axL.scatter(goal[1], goal[0], c="k", marker="*", s=200, zorder=5)
+    axL.annotate("start", (start[1], start[0]), textcoords="offset points", xytext=(8, 6), fontsize=9)
+    axL.annotate("goal", (goal[1], goal[0]), textcoords="offset points", xytext=(8, 6), fontsize=9)
+    axL.set_xlabel("along-track  y"); axL.set_ylabel("radial  x")
+    axL.set_aspect("equal"); axL.grid(alpha=0.3); axL.legend(fontsize=8.3, loc="lower left")
+    axL.set_title("Plug in ANY linear dynamics G — the optimal plan changes,\n"
+                  "the solver does not (only two numbers change)", fontsize=10.5)
+
+    # --- Right: the honest LEO case, CW vs J2 (coincide) ---
+    tcw, dvcw = plan(*cwc, start, goal, N, dt)
+    tj2, dvj2 = plan(*ssc, start, goal, N, dt)
+    Qcw = np.vstack([start, tcw, goal]); Qj2 = np.vstack([start, tj2, goal])
+    axR.plot(Qcw[:, 1], Qcw[:, 0], "-", color="#2563EB", lw=4.0, alpha=0.9,
+             label=f"Clohessy-Wiltshire  (Δv={dvcw:.3f})")
+    axR.plot(Qj2[:, 1], Qj2[:, 0], "--", color="#DC2626", lw=2.0,
+             label=f"J2 / Schweighart-Sedwick  (Δv={dvj2:.3f})")
+    axR.scatter(start[1], start[0], c="k", s=55, zorder=5)
+    axR.scatter(goal[1], goal[0], c="k", marker="*", s=200, zorder=5)
+    axR.set_xlabel("along-track  y"); axR.set_ylabel("radial  x")
+    axR.set_aspect("equal"); axR.grid(alpha=0.3); axR.legend(fontsize=9, loc="lower left")
+    axR.set_title("At LEO, CW and J2 nearly coincide — and that is the point:\n"
+                  "CW is the right, cheap model for short LEO reconfiguration", fontsize=10.5)
+    axR.text(0.97, 0.96, f"the two curves overlap\n(coefficients differ by {dcoeff:.0e})",
+             transform=axR.transAxes, ha="right", va="top", fontsize=8.5, color="#555",
+             bbox=dict(boxstyle="round,pad=0.4", fc="#f4f7fb", ec="#dfe3ea"))
+
+    fig.suptitle("COSMOS — one construction, any linear dynamics  (B = D₂ − G)",
+                 fontsize=13, fontweight="bold")
+    fig.text(0.5, 0.005,
+             "Only the two coefficients (kxx, kc) of G change between dynamics; the metric BᵀB, "
+             "its preconditioner and the solver are identical.",
+             ha="center", fontsize=8.5, color="#555")
     fig.tight_layout(rect=(0, 0.03, 1, 1))
     fig.savefig("cosmos_generality.png", dpi=150)
     print("\nFigure -> cosmos_generality.png")
