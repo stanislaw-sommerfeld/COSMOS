@@ -307,6 +307,17 @@ def test_chance_constraint_is_calibrated_and_monotone():
 # ---------------------------------------------------------------------------
 # T16 - COSMOS matches the SCP/SQP optimum on the constrained problem (near-optimal)
 # ---------------------------------------------------------------------------
+def test_si_mission_gives_credible_numbers():
+    """The realistic SI mission reports sane per-chaser Delta-v (order 0.1-10 m/s)
+       and a positive saving from the eccentric metric."""
+    from cosmos import cosmos_mission as mis
+    r = mis.run(perigee_km=600, apogee_km=8000, N=70, verbose=False)
+    per_chaser = r["dvc"] / len(r["starts"])
+    assert 0.1 < per_chaser < 10.0, f"per-chaser Δv {per_chaser:.3f} m/s is not credible"
+    assert r["dvc"] < r["dvb"], "eccentric metric should save fuel on the eccentric orbit"
+    assert r["orbit"]["e"] > 0.3, "scenario should be genuinely eccentric"
+
+
 def test_eccentric_advantage_is_a_robust_regime():
     """The eccentric-metric saving is positive across the small-to-moderate
        amplitude envelope and grows with eccentricity -- not a cherry-picked point."""
@@ -317,6 +328,20 @@ def test_eccentric_advantage_is_a_robust_regime():
     assert (grid > 0).all(), f"some cells non-positive:\n{grid}"
     # saving grows with eccentricity (col for e=0.3 > col for e=0.1), each row
     assert (grid[:, 1] > grid[:, 0]).all(), "saving should grow with eccentricity"
+
+
+def test_numerical_robustness_across_N():
+    """The covariant descent stays exact (vs the closed form) and the Cholesky
+       preconditioner stays accurate across a wide range of discretizations N,
+       despite the metric's condition number growing ~N^2."""
+    from cosmos import cosmos_robustness as rob
+    for N in (40, 150):
+        rel, ratio = rob.descent_accuracy(N, iters=2500)
+        assert rel < 1e-6, f"N={N}: descent off the closed form by {rel:.2e}"
+        assert 0.95 <= ratio <= 1.05, f"N={N}: LQ ratio {ratio:.3f} out of band"
+        assert rob.spd_inverse_accuracy(N) < 1e-8
+    # conditioning grows but is finite and monotone
+    assert rob.conditioning(150) > rob.conditioning(40)
 
 
 def test_cosmos_matches_scp_on_constrained_problem():

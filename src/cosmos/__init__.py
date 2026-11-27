@@ -16,7 +16,7 @@ The standalone demonstration modules (``cosmos.cosmos_optimal``,
 ``main()`` and are also runnable as scripts (``python -m cosmos.<name>``).
 """
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 # --- fuel-aware Clohessy-Wiltshire core (Part III, the contribution) --------
 from .chomp_cw import (
