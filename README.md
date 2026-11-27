@@ -281,6 +281,20 @@ python -m cosmos.cosmos_validity    # saving across (eccentricity × amplitude)
 
 <div align="center"><img src="figures/cosmos_validity.png" width="760"/></div>
 
+**11 · A realistic SI mission (credible m/s).** A four-chaser debris rendezvous around a *real* eccentric reference orbit (perigee 600 km / apogee 8000 km, $e=0.35$, 183-min period), with the formation at the hundred-metre scale (amplitude $\sim 10^{-5}$ of the orbit radius — firmly in the linear-validity regime). Scored under the full nonlinear dynamics, the correct time-varying metric spends **~1.1 m/s per chaser** versus ~1.4 m/s for the circular-metric baseline — a **+19.5 %** propellant saving. These are believable low-thrust formation-reconfiguration budgets.
+
+```bash
+python -m cosmos.cosmos_mission     # Δv in m/s on a real eccentric orbit
+```
+
+<div align="center"><img src="figures/cosmos_mission.png" width="760"/></div>
+
+**12 · Numerical robustness.** Across discretizations $N$ from 20 to 200, the metric's condition number grows $\sim N^2$ (a finite-difference Laplacian), but the Cholesky-based preconditioner keeps the covariant descent exact (within $\sim 10^{-10}$ of the closed-form optimum) and the LQ energy ratio within a fraction of a percent of 1.0 — the mild large-$N$ drift is the expected discretization effect, not solver error.
+
+```bash
+python -m cosmos.cosmos_robustness  # conditioning & accuracy vs N
+```
+
 > **Code-quality note (v2).** The shared numerics — the controllability Gramian, the CW state system, the closed-form LQ optimum, the time-varying operators, and the Euclidean/Riemannian keep-out and inter-agent projections — now live once in [`cosmos/_core.py`](src/cosmos/_core.py) instead of being copy-pasted across modules. Modules A and B are importable (no side effects at import) and unit-tested. A faster, exact Van Loan Gramian is available via `controllability_gramian(..., method="vanloan")`. The regression suite grew from 8 to **15 tests**; every headline number is unchanged.
 
 ## 🖼️ Gallery
