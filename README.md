@@ -289,6 +289,10 @@ python -m cosmos.cosmos_validity    # saving across (eccentricity × amplitude)
 |:--:|:--:|:--:|
 | <img src="figures/cosmos_validation.png" width="260"/> | <img src="figures/cosmos_units.png" width="200"/> | <img src="figures/orbital_sim.gif" width="200"/> |
 
+## 📄 Technical report
+
+A structured, citable write-up of the method, results, and honest limits is in **[`REPORT.md`](REPORT.md)** — abstract, problem statement, the metric-is-the-dynamics method, the validated results (40 %, 1.00×, 15×→1.69×, the SCP benchmark, eccentric generality), a validity/limits section, and references. Every number in it is reproduced by a named script in this repository.
+
 ## 📖 Documentation
 
 The full method — the layered derivation, the cost-functional design, and the design decisions — is presented inline above (**The core idea** and **The three contributions**) and in the accompanying project report. The code is the executable reference: each module's header documents what it implements, and `python run_all.py` reproduces every result and figure.
