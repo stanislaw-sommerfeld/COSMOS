@@ -273,6 +273,14 @@ python -m cosmos.cosmos_benchmark   # COSMOS vs SCP/SQP vs LQ (quality, feasibil
 
 <div align="center"><img src="figures/cosmos_benchmark.png" width="760"/></div>
 
+**10 · Validity / regime map — *when* does the eccentric metric pay? (honest study).** Rather than report a single "16% at $e=0.3$", this sweeps a family of transfers over (eccentricity × amplitude) and scores COSMOS vs the circular (CW) metric under the **full nonlinear** dynamics. The saving is a **robust regime** — positive and growing with eccentricity across small-to-moderate amplitudes — not a cherry-picked point. It also documents the honest limit: for very large or strongly-radial transfers the linear Tschauner–Hempel model *itself* departs from the true nonlinear motion, so no linear metric (CW or TH) is the right object there — a limit of linear relative-motion planning, surfaced rather than hidden.
+
+```bash
+python -m cosmos.cosmos_validity    # saving across (eccentricity × amplitude)
+```
+
+<div align="center"><img src="figures/cosmos_validity.png" width="760"/></div>
+
 > **Code-quality note (v2).** The shared numerics — the controllability Gramian, the CW state system, the closed-form LQ optimum, the time-varying operators, and the Euclidean/Riemannian keep-out and inter-agent projections — now live once in [`cosmos/_core.py`](src/cosmos/_core.py) instead of being copy-pasted across modules. Modules A and B are importable (no side effects at import) and unit-tested. A faster, exact Van Loan Gramian is available via `controllability_gramian(..., method="vanloan")`. The regression suite grew from 8 to **15 tests**; every headline number is unchanged.
 
 ## 🖼️ Gallery

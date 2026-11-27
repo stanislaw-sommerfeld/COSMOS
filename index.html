@@ -426,6 +426,15 @@
         <span class="detail-link">Read the details →</span>
       </div>
     </div>
+
+    <div class="three" style="margin-top:22px">
+      <div class="card contrib reveal" style="--c:var(--mint)" data-modal="val">
+        <div class="n">★</div><h3>Validity map — an honest regime study</h3>
+        <p>Not a cherry-picked number: a sweep over (eccentricity × transfer amplitude), scored under the <b>full nonlinear</b> dynamics, showing the eccentric-metric saving is a <b>robust regime</b> that grows with the dynamics mismatch — and documenting where the linear model itself stops being valid.</p>
+        <div class="figframe"><img src="figures/cosmos_validity.png" alt="validity regime map"/></div>
+        <span class="detail-link">Read the details →</span>
+      </div>
+    </div>
   </section>
 
   <!-- BENCHMARK (v3) -->
@@ -663,6 +672,17 @@ python -m cosmos.cosmos_safe     <span class="ok"># 15× → 1.69× safety fix</
     <p>Planning against \(r_{\text{safe}}\) with the <b>same</b> Module B projection then guarantees the chance constraint — zero new machinery. Monte Carlo confirms the realized safety tracks the target \(\beta\), and Δv rises smoothly with the safety level: a tunable safety/fuel trade.</p>
     <span class="m-tag">src/cosmos/cosmos_chance.py</span><span class="m-tag">python -m cosmos.cosmos_chance</span>
     <div class="m-fig"><img src="figures/cosmos_chance.png" alt="chance-constraint calibration"/></div>
+  </div>
+
+  <div data-id="val">
+    <div class="m-kicker">Validity · honesty</div>
+    <h3>When does the eccentric metric actually pay?</h3>
+    <p>A single headline number (&ldquo;16% at \(e=0.3\)&rdquo;) invites the fair question: <i>robust, or cherry-picked?</i> This study answers it with a <b>regime map</b> rather than a point. It sweeps a family of rest-to-rest transfers over two axes — reference-orbit eccentricity and transfer amplitude — keeping the transfer shape fixed, and scores the COSMOS plan (correct time-varying metric) against the dynamics-blind plan (circular / CW metric) under the <b>same full nonlinear</b> ground truth.</p>
+    <h4>What it shows</h4>
+    <ul class="m-list"><li>The saving is <b>positive and grows with eccentricity</b> across the whole small-to-moderate amplitude envelope (3–16%) — so the headline result is a <b>regime, not a lucky point</b>.</li><li>The advantage tracks the <b>dynamics mismatch</b>: the more the circular assumption is wrong, the more the correct metric helps.</li><li><b>Documented limit (honest):</b> Tschauner–Hempel is a <i>linearization</i>. For very large or strongly-radial transfers the linear model itself departs from the true nonlinear motion, so no linear metric (CW or TH) is the right object there — a limit of linear relative-motion planning, surfaced rather than hidden.</li></ul>
+    <p>Showing the operating envelope — including where the method does <i>not</i> apply — is exactly what makes a contribution credible rather than oversold.</p>
+    <span class="m-tag">src/cosmos/cosmos_validity.py</span><span class="m-tag">python -m cosmos.cosmos_validity</span>
+    <div class="m-fig"><img src="figures/cosmos_validity.png" alt="validity regime map"/></div>
   </div>
 
   <div data-id="bench">
