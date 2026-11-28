@@ -115,13 +115,13 @@
 
     <div class="card controls">
       <div class="grp">
-        <label class="lab">scénario</label>
+        <label class="lab">scenario</label>
         <div class="toggles" id="presets">
           <button class="tog b on" data-scn="reconfig">reconfiguration</button>
-          <button class="tog b" data-scn="debris">rendez-vous</button>
-          <button class="tog b" data-scn="avoid">évitement</button>
+          <button class="tog b" data-scn="debris">rendezvous</button>
+          <button class="tog b" data-scn="avoid">avoidance</button>
         </div>
-        <div class="hint" id="scnhint">Un satellite rejoint sa cible en contournant la zone interdite.</div>
+        <div class="hint" id="scnhint">A satellite reaches its target while going around the keep-out zone.</div>
       </div>
 
       <div class="grp">
@@ -323,6 +323,7 @@ function repulsion(x){                    // workspace soft keep-out gradient
 }
 function descendOne(op, c0, x){
   const R=op.ROWS, C=op.COLS;
+  let maxStep=0;                          // track the largest move this call (for convergence)
   for(let it=0; it<ITERS_PER_FRAME; it++){
     const Bx = matvec(op.B, x, R, C);
     const u = new Float64Array(R);
@@ -331,10 +332,12 @@ function descendOne(op, c0, x){
     const gr = repulsion(x);
     for(let i=0;i<C;i++) g[i]+=gr[i];
     const dx = matvec(op.Minv, g, C, C);
-    for(let i=0;i<C;i++) x[i]-=STEP*dx[i];
+    for(let i=0;i<C;i++){ const s=STEP*dx[i]; if(Math.abs(s)>maxStep) maxStep=Math.abs(s); x[i]-=s; }
   }
+  return maxStep;
 }
-function descentStep(){ descendOne(opN,c0N,xi); descendOne(op0,c00,xi0); }
+// returns the largest waypoint move across both plans -> lets the loop detect convergence
+function descentStep(){ return Math.max(descendOne(opN,c0N,xi), descendOne(op0,c00,xi0)); }
 
 function controlOf(op, c0, x){            // physical control u (first 2N entries)
   const Bx=matvec(op.B,x,op.ROWS,op.COLS);
@@ -449,7 +452,23 @@ function render(){
 /* ============================================================================
    Loop + interaction
    ============================================================================ */
-function frame(){ descentStep(); render(); requestAnimationFrame(frame); }
+// --- convergence-aware loop: descend until the REPORTED metrics stabilize, then
+//     FREEZE. We watch the fuel-aware Δv (not raw waypoint moves): a soft-penalty
+//     keep-out makes the waypoints jitter forever at a sub-pixel level while the
+//     physical cost is already converged, so the Δv is the honest stop signal.
+let settling = true, _prevDv = Infinity, _stable = 0;
+function kick(){ settling = true; _prevDv = Infinity; _stable = 0; }  // resume on any change
+function frame(){
+  if(settling){
+    descentStep();
+    render();                                 // metrics refresh only while settling
+    const dv = deltaV(controlOf(opN, c0N, xi));
+    if(Math.abs(dv - _prevDv) < 1e-3){ _stable++; } else { _stable = 0; }
+    _prevDv = dv;
+    if(_stable >= 4) settling = false;         // Δv steady for several frames -> freeze
+  }
+  requestAnimationFrame(frame);
+}
 
 let drag=null;
 function pick(px,py){
@@ -475,7 +494,7 @@ cv.addEventListener('pointermove',e=>{ if(!drag) return; const {px,py}=pointer(e
   w.y=Math.max(RY[0]+.3,Math.min(RY[1]-.3,w.y));
   if(drag==='start') S.start=w; else if(drag==='goal') S.goal=w;
   else { S.obs.x=w.x; S.obs.y=w.y; }
-  recomputeOffsets();
+  recomputeOffsets(); kick();
 });
 cv.addEventListener('pointerup',()=>drag=null);
 
@@ -485,20 +504,20 @@ $('nm').addEventListener('input',e=>{ nm=+e.target.value; $('nmv').textContent=n
   $('nmhint').textContent = nm<0.02 ? 'n = 0 : free space — the optimum is the straight line.'
     : nm>1.0 ? 'strong orbital coupling: the cheap path curves with the drift.'
     : 'n > 0 : orbital coupling bends the cheap path.';
-  opN=buildOp(nm); recomputeOffsets(); });
+  opN=buildOp(nm); recomputeOffsets(); kick(); });
 $('res').addEventListener('input',e=>{ N=+e.target.value; $('resv').textContent=N;
-  rebuild(); resetTraj(); });
-$('rad').addEventListener('input',e=>{ S.obs.r=+e.target.value; $('radv').textContent=S.obs.r.toFixed(2); });
-$('tBase').addEventListener('click',e=>{ showBase=!showBase; e.target.classList.toggle('on',showBase); });
-$('tThrust').addEventListener('click',e=>{ showThrust=!showThrust; e.target.classList.toggle('on',showThrust); });
+  rebuild(); resetTraj(); kick(); });
+$('rad').addEventListener('input',e=>{ S.obs.r=+e.target.value; $('radv').textContent=S.obs.r.toFixed(2); kick(); });
+$('tBase').addEventListener('click',e=>{ showBase=!showBase; e.target.classList.toggle('on',showBase); kick(); });
+$('tThrust').addEventListener('click',e=>{ showThrust=!showThrust; e.target.classList.toggle('on',showThrust); kick(); });
 /* ---- preset scenarios (one click = see the point) ---- */
 const SCENARIOS = {
   reconfig: { S:{start:{x:3.2,y:-5.2}, goal:{x:-2.4,y:4.6}, obs:{x:0.1,y:0.2,r:1.4}}, nm:1.0,
-    hint:"Un satellite rejoint sa cible en contournant la zone interdite." },
+    hint:"A satellite reaches its target while going around the keep-out zone." },
   debris:   { S:{start:{x:4.8,y:-5.6}, goal:{x:-3.2,y:5.2}, obs:{x:0.0,y:0.0,r:0.0}}, nm:1.0,
-    hint:"Rendez-vous libre (sans obstacle) : le chemin épouse la dérive orbitale." },
+    hint:"Obstacle-free rendezvous: the path rides the natural orbital drift." },
   avoid:    { S:{start:{x:3.0,y:-4.6}, goal:{x:-3.0,y:4.6}, obs:{x:0.0,y:0.0,r:2.2}}, nm:1.0,
-    hint:"Gros obstacle au centre : COSMOS contourne 'dans la métrique fuel'." },
+    hint:"Large central obstacle: COSMOS detours 'in the fuel metric'." },
 };
 function applyScenario(name){
   const sc=SCENARIOS[name]; if(!sc) return;
@@ -508,7 +527,7 @@ function applyScenario(name){
   $('scnhint').textContent=sc.hint;
   document.querySelectorAll('#presets .tog').forEach(b=>
     b.classList.toggle('on', b.getAttribute('data-scn')===name));
-  rebuild(); resetTraj();
+  rebuild(); resetTraj(); kick();
 }
 document.querySelectorAll('#presets .tog').forEach(b=>
   b.addEventListener('click',()=>applyScenario(b.getAttribute('data-scn'))));

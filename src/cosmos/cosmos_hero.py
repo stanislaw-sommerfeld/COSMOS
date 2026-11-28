@@ -60,7 +60,7 @@ def hero_2d(out="cosmos_hero.png", verbose=True):
     for ob in r["obstacles"]:
         axT.fill(ob["c"][1] + ob["r"] * np.cos(th), ob["c"][0] + ob["r"] * np.sin(th),
                  color=KEEP, alpha=0.18)
-        axT.text(ob["c"][1], ob["c"][0], "zone\ninterdite", ha="center", va="center",
+        axT.text(ob["c"][1], ob["c"][0], "keep-out\nzone", ha="center", va="center",
                  color="#7a2a1a", fontsize=8)
     for k in range(K):
         Qf = np.vstack([r["starts"][k], r["trajs_free"][k], r["goals"][k]])
@@ -70,33 +70,33 @@ def hero_2d(out="cosmos_hero.png", verbose=True):
         axT.scatter(r["starts"][k][1], r["starts"][k][0], color=colors[k], s=48, zorder=5)
         axT.scatter(r["goals"][k][1], r["goals"][k][0], color=colors[k], marker="*",
                     s=180, zorder=5)
-    axT.plot([], [], "--", color=BLIND, lw=1.6, label="sans COSMOS (pousse à travers la dérive)")
-    axT.plot([], [], "-", color=INK, lw=2.4, label="avec COSMOS (épouse la dérive orbitale)")
-    axT.scatter([], [], color="#444", marker="o", s=48, label="départ")
-    axT.scatter([], [], color="#444", marker="*", s=150, label="cible")
-    axT.set_xlabel("le long de l'orbite  [unités normalisées]")
+    axT.plot([], [], "--", color=BLIND, lw=1.6, label="without COSMOS (pushes through the drift)")
+    axT.plot([], [], "-", color=INK, lw=2.4, label="with COSMOS (rides the orbital drift)")
+    axT.scatter([], [], color="#444", marker="o", s=48, label="start")
+    axT.scatter([], [], color="#444", marker="*", s=150, label="target")
+    axT.set_xlabel("along-track  [normalized units]")
     axT.set_ylabel("radial")
     axT.set_aspect("equal"); axT.grid(alpha=0.25); axT.legend(fontsize=8.6, loc="upper right")
-    axT.set_title("Reconfiguration d'une formation de 4 satellites", fontsize=11, fontweight="bold")
+    axT.set_title("Reconfiguration of a 4-satellite formation", fontsize=11, fontweight="bold")
 
     # big callout
-    axT.text(0.02, 0.03, f"−{r['saving']:.0f}% de carburant",
-             transform=axT.transAxes, fontsize=19, fontweight="bold", color=FUEL,
+    axT.text(0.02, 0.03, f"−{r['saving']:.0f}% fuel",
+             transform=axT.transAxes, fontsize=20, fontweight="bold", color=FUEL,
              va="bottom", ha="left")
-    axT.text(0.02, 0.005, "même mission, même sûreté", transform=axT.transAxes,
+    axT.text(0.02, 0.005, "same mission, same collision-free safety", transform=axT.transAxes,
              fontsize=8.5, color=MUT, va="bottom", ha="left")
 
     # per-satellite fuel bars
     idx = np.arange(K); w = 0.38
-    axB.bar(idx - w/2, r["perf"], w, color=BLIND, alpha=0.85, label="sans COSMOS")
-    axB.bar(idx + w/2, r["per"], w, color=FUEL, label="avec COSMOS")
+    axB.bar(idx - w/2, r["perf"], w, color=BLIND, alpha=0.85, label="without COSMOS")
+    axB.bar(idx + w/2, r["per"], w, color=FUEL, label="with COSMOS")
     axB.set_xticks(idx); axB.set_xticklabels([f"sat {i+1}" for i in range(K)], fontsize=9)
-    axB.set_ylabel("Δv par satellite  (carburant)")
+    axB.set_ylabel("Δv per satellite  (fuel)")
     axB.legend(fontsize=9); axB.grid(alpha=0.25, axis="y")
-    axB.set_title(f"Total : {r['dvf']:.1f} → {r['dv']:.1f}   "
-                  f"(sans collision, marge +{r['clr']:.1f})", fontsize=9.5)
+    axB.set_title(f"Total: {r['dvf']:.1f} → {r['dv']:.1f}   "
+                  f"(collision-free, margin +{r['clr']:.1f})", fontsize=9.5)
 
-    fig.suptitle("COSMOS — « lisser » dans la bonne métrique = dépenser moins de carburant",
+    fig.suptitle("COSMOS — \"smoothing\" in the right metric = spending less fuel",
                  fontsize=13, fontweight="bold")
     fig.tight_layout(); fig.savefig(out, dpi=150)
     if verbose:
@@ -126,7 +126,7 @@ def _draw_3d(ax, r, elev=22, azim=-60):
                    color=colors[k], s=36)
         ax.scatter(r["goals"][k][1], r["goals"][k][0], r["goals"][k][2],
                    color=colors[k], marker="*", s=140)
-    ax.set_xlabel("le long de l'orbite"); ax.set_ylabel("radial"); ax.set_zlabel("hors-plan")
+    ax.set_xlabel("along-track"); ax.set_ylabel("radial"); ax.set_zlabel("cross-track")
     ax.view_init(elev=elev, azim=azim)
 
 
@@ -135,12 +135,12 @@ def hero_3d(out="cosmos_hero_3d.png", verbose=True):
     fig = plt.figure(figsize=(9.5, 7.6))
     ax = fig.add_subplot(111, projection="3d")
     _draw_3d(ax, r)
-    ax.plot([], [], "--", color=BLIND, lw=1.6, label="sans COSMOS")
-    ax.plot([], [], "-", color=INK, lw=2.4, label="avec COSMOS")
+    ax.plot([], [], "--", color=BLIND, lw=1.6, label="without COSMOS")
+    ax.plot([], [], "-", color=INK, lw=2.4, label="with COSMOS")
     ax.legend(fontsize=9, loc="upper left")
-    ax.set_title(f"COSMOS en 3D — rendez-vous hors-plan\n"
-                 f"carburant total : {r['dvf']:.1f} → {r['dv']:.1f}   "
-                 f"(−{r['saving']:.0f}%, sans collision)",
+    ax.set_title(f"COSMOS in 3D — out-of-plane rendezvous\n"
+                 f"total fuel: {r['dvf']:.1f} → {r['dv']:.1f}   "
+                 f"(−{r['saving']:.0f}%, collision-free)",
                  fontsize=11, fontweight="bold")
     fig.tight_layout(); fig.savefig(out, dpi=150)
     if verbose:
@@ -159,7 +159,7 @@ def make_gif(out="cosmos_hero_3d.gif", frames=48, verbose=True):
     def frame(i):
         ax.cla()
         _draw_3d(ax, r, elev=20, azim=-80 + 360 * i / frames)
-        ax.set_title(f"COSMOS 3D — carburant −{r['saving']:.0f}% (sans collision)",
+        ax.set_title(f"COSMOS 3D — fuel −{r['saving']:.0f}% (collision-free)",
                      fontsize=10, fontweight="bold")
     anim = FuncAnimation(fig, frame, frames=frames, interval=60)
     anim.save(out, writer=PillowWriter(fps=16), dpi=80)
